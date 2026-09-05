@@ -1,56 +1,77 @@
-# Welcome to your Expo app 👋
+# Khutwa (خطوة)
+### "Every Step Waters the Story."
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**SMAC 2026 — Smart Mobile App Contest**
+Theme: AI for a Stronger Family Bonds
 
-## Get started
+---
 
-1. Install dependencies
+## Team
 
-   ```bash
-   npm install
-   ```
+| Name | Role | GitHub |
+|---|---|---|
+| May Ahmed Mourad | AI & Data Lead| MayMourad |
+| Shamsa Faris Al Mazrouei | Core App Lead | sfarismaz |
 
-2. Start the app
+## The Idea
 
-   ```bash
-   npx expo start
-   ```
+Khutwa turns a family's everyday walks into a living, shared Ghaf tree that grows with their collective steps and blooms with short AI-narrated memories of the places they've been together — built for the UAE Year of Family 2026.
 
-In the output, you'll find options to open the app in a
+Families link into one shared group. As they move, their combined steps grow a tree that lives on the home screen. When a family member is near a place tied to a family memory, the app unlocks a short, AI-narrated story about that spot. When multiple family members are physically together, the tree visibly blooms — turning ordinary movement into a shared, meaningful ritual.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Core Features (MVP)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- **Family group & steps** — family members link into a shared group; step counts contribute to one shared tree.
+- **Shared tree widget** — grows in visible stages tied to cumulative family steps.
+- **Location stories** — a curated set of real family/heritage locations, each with a short AI-narrated story generated ahead of time and cached on-device.
+- **Geofence trigger + narration** — the app detects proximity to a stored location and plays its story via text-to-speech.
+- **"Together" bloom state** — when family members are co-located, the tree visibly blooms.
+- **Privacy-first by design** — location data stays on-device by default; nothing is shared outside the family group; parental control over what younger members' accounts record.
 
-## Get a fresh project
+See `/docs/idea-brief.md` for the full refined idea brief, scope rationale, and cut/future features.
 
-When you're ready, run:
+## Tech Stack
+
+- **Framework:** React Native (Expo, managed workflow)
+- **Steps/movement:** `expo-sensors`
+- **Geofencing/location:** `expo-location`
+- **Text-to-speech:** `expo-speech`
+- **Backend/data:** Firebase (Auth + Firestore)
+- **AI story generation:** cloud LLM API, used during development to pre-generate cached stories (see `/docs/ai-prompt-log.md`)
+- **Builds:** EAS Build
+
+## AI Usage Disclosure
+
+Per competition rules, all AI usage during development is logged with prompts in `/docs/ai-prompt-log.md`. This includes:
+- Prompts used to generate the in-app location stories (a core app feature, not a dev shortcut)
+- Prompts used to get development/coding assistance from AI tools
+
+No AI tool was used to generate the application as a whole; all code is written and understood by the team.
+
+## Getting Started
 
 ```bash
-npm run reset-project
+# Clone the repo
+git clone <repo-url>
+cd khutwa
+
+# Install dependencies
+npm install
+
+# Start the Expo dev server
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Requires the Expo Go app (for quick device testing) or an EAS development build. See `/docs/setup.md` for full environment setup instructions.
 
-### Other setup steps
+## Project Structure
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```
+/src        — app source code (screens, components, logic)
+/assets     — images, tree stage assets, cached audio
+/docs       — idea brief, AI prompt log, setup notes
+```
 
-## Learn more
+## Status
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+🚧 In active development for SMAC 2026 — Submission: Sept 8, 2026 · Demo Day: Sept 16, 2026
