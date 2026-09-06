@@ -54,12 +54,12 @@
     },
     "extra": {
       "firebase": {
-        "apiKey": "",
-        "authDomain": "",
-        "projectId": "",
-        "storageBucket": "",
-        "messagingSenderId": "",
-        "appId": ""
+        "apiKey": "AIzaSyD-mlWwN2TBIi2s2ahBeUU-spkcYD2iDEc",
+        "authDomain": "smac-adnocmz-khutwa.firebaseapp.com",
+        "projectId": "smac-adnocmz-khutwa",
+        "storageBucket": "smac-adnocmz-khutwa.firebasestorage.app",
+        "messagingSenderId": "941848190225",
+        "appId": "1:941848190225:web:6bb878b1f610c55faec0b0"
       },
       "llm": {
         "provider": "",
