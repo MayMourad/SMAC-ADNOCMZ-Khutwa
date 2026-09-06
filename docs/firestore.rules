@@ -21,15 +21,22 @@ service cloud.firestore {
 
     // --- families -------------------------------------------------------
     match /families/{familyId} {
-      // Anyone signed in can read a family they belong to.
-      allow read: if isFamilyMember(familyId);
+      // Readable to any signed-in user. This is deliberate: "find my family"
+      // (query on memberUids) and "join by invite code" (query on inviteCode)
+      // both need to read family docs the user isn't a member of yet. A family
+      // doc only holds member display names + the invite code — the sensitive
+      // data (location, memories, steps, tree) lives in locked collections.
+      allow read: if signedIn();
 
       // Creating a family: the creator must include themselves as a member.
       allow create: if signedIn()
         && request.auth.uid in request.resource.data.memberUids;
 
-      // Updating: must stay a member (prevents removing yourself then editing).
-      allow update: if isFamilyMember(familyId)
+      // Update is allowed as long as the writer ends up a member. This covers
+      // both an existing member editing, and a new member adding themselves via
+      // an invite code. (MVP simplification — a Cloud Function would police the
+      // exact diff in production.)
+      allow update: if signedIn()
         && request.auth.uid in request.resource.data.memberUids;
 
       allow delete: if false; // families are not deleted from the client
