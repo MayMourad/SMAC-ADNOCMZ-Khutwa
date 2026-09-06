@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// Khutwa — draft Firestore security rules.
+// Deploy with:  firebase deploy --only firestore:rules
+// (or paste into Firebase console → Firestore → Rules)
+//
+// Model: a family document carries `memberUids: string[]`. A user may touch a
+// family and its sub-collections only if their uid is in that array.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isFamilyMember(familyId) {
+      return signedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.memberUids;
+    }
+
+    // --- families -------------------------------------------------------
+    match /families/{familyId} {
+      // Anyone signed in can read a family they belong to.
+      allow read: if isFamilyMember(familyId);
+
+      // Creating a family: the creator must include themselves as a member.
+      allow create: if signedIn()
+        && request.auth.uid in request.resource.data.memberUids;
+
+      // Updating: must stay a member (prevents removing yourself then editing).
+      allow update: if isFamilyMember(familyId)
+        && request.auth.uid in request.resource.data.memberUids;
+
+      allow delete: if false; // families are not deleted from the client
+
+      // --- steps sub-collection --------------------------------------
+      match /steps/{stepId} {
+        allow read: if isFamilyMember(familyId);
+        // A member may only write their own step rows (doc id starts with uid).
+        allow write: if isFamilyMember(familyId)
+          && stepId.split('_')[0] == request.auth.uid;
+      }
+    }
+
+    // --- treeState -----------------------------------------------------
+    match /treeState/{familyId} {
+      allow read: if isFamilyMember(familyId);
+      // For the MVP the client recomputes and writes the tree. Lock this down to
+      // a Cloud Function later by changing `write` to `if false`.
+      allow write: if isFamilyMember(familyId);
+    }
+
+    // --- memories (shared curated content) ---------------------------
+    match /memories/{memoryId} {
+      allow read: if signedIn();
+      // Clients may only flip the unlock fields, nothing else.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['unlockedBy', 'unlockedAt']);
+      allow create, delete: if false; // seeded by an admin script only
+    }
+  }
+}
