@@ -67,10 +67,24 @@ Requires the Expo Go app (for quick device testing) or an EAS development build.
 ## Project Structure
 
 ```
-/src        — app source code (screens, components, logic)
-/assets     — images, tree stage assets, cached audio
-/docs       — idea brief, AI prompt log, setup notes
+src/
+  app/         expo-router routes (thin re-exports of screens) + _layout
+  screens/     Home · Walk · Stories · Family
+  components/  GhafTree, ScoreBar, AppTabs, themed primitives
+  hooks/       use-auth / use-family / use-tree-state / use-memories
+               (auto-switch between live Firestore and mock data)
+  services/    firebase · location · steps · speech · llm  (only these touch I/O)
+  logic/       khutwaScore.ts — pure scoring functions
+  data/        locations.ts · stories.ts (pre-generated cache) · mock.ts
+  types/       models.ts — shape of every Firestore document
+  config/      env.ts — reads secrets from app.json > expo.extra
+assets/        images, icons
+docs/          architecture · data-model · khutwa-score · firestore.rules ·
+               ai-prompt-log · idea-brief · locations · setup
+scripts/       dev-only: generate-stories.ts · seed-firestore.ts
 ```
+
+See `docs/architecture.md` for how the pieces fit together.
 
 ## Status
 
