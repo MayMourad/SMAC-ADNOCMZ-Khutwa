@@ -90,6 +90,37 @@ export interface DailyStepEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Week stats
+// ---------------------------------------------------------------------------
+
+/**
+ * Rolling counters for the current week that can't be reconstructed from other
+ * documents after the fact. Stored at `families/{familyId}/stats/week`.
+ * The app bumps these as things happen (e.g. +1 togetherMoments when the tree
+ * blooms) and a reset job clears them at the start of each week.
+ */
+export interface WeekStats {
+  /** Distinct times the family was together (tree bloomed) this week. */
+  togetherMoments: number;
+  /** Sessions where 2+ members were walking together. */
+  coMovementSessions: number;
+  /** Minutes any member spent actively walking this week. */
+  activeMinutes: number;
+  /** Voice notes / written memories added to a place this week. */
+  storyContributions: number;
+  /** ISO date the current week window started (for the weekly reset). */
+  weekStartedOn: IsoDate;
+  updatedAt: EpochMillis;
+}
+
+export const EMPTY_WEEK_STATS: Omit<WeekStats, 'weekStartedOn' | 'updatedAt'> = {
+  togetherMoments: 0,
+  coMovementSessions: 0,
+  activeMinutes: 0,
+  storyContributions: 0,
+};
+
+// ---------------------------------------------------------------------------
 // Tree state
 // ---------------------------------------------------------------------------
 
