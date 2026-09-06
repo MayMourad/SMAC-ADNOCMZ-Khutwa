@@ -59,11 +59,16 @@ service cloud.firestore {
     // --- memories (shared curated content) ---------------------------
     match /memories/{memoryId} {
       allow read: if signedIn();
-      // Clients may only flip the unlock fields, nothing else.
+      // Any signed-in user may create a memory doc — this is how
+      // scripts/seed-firestore.ts loads the curated set (it signs in
+      // anonymously first). Tighten to `if false` + an Admin SDK seed once
+      // the content is stable.
+      allow create: if signedIn();
+      // After that, clients may only flip the unlock fields, nothing else.
       allow update: if signedIn()
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['unlockedBy', 'unlockedAt']);
-      allow create, delete: if false; // seeded by an admin script only
+      allow delete: if false;
     }
   }
 }

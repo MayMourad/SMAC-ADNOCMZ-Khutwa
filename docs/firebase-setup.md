@@ -39,9 +39,13 @@ controlled by the Security Rules, not by hiding this. So it's fine to put it in
 
 ## 4. Create the Firestore database
 
-1. Left sidebar → **Build → Firestore Database → Create database**.
-2. Start in **production mode** (we'll paste real rules next) → Next.
-3. Location: pick `eur3 (europe-west)` or the nearest region → Enable.
+1. Left sidebar → **Build → Firestore Database**.
+2. Click **Create database**. You must complete this whole wizard — just opening
+   the page enables the API but does **not** create the database.
+3. **Production mode** (we paste real rules next) → Next.
+4. Location: pick `eur3 (europe-west)` or the nearest region → **Enable**.
+5. Wait until you see the empty **Data** table for `(default)` — that's the
+   database created.
 
 ## 5. Give the config to the app
 
@@ -75,7 +79,9 @@ then `firebase deploy --only firestore:rules`.)
 
 ## 7. Seed the location memories
 
-Once the config is in and rules are published:
+Needs steps 3 (Anonymous sign-in on), 4 (database created) and 6 (rules
+published) done first — the script signs in anonymously and the published rules
+let a signed-in user create `memories`.
 
 ```bash
 npx tsx scripts/seed-firestore.ts
