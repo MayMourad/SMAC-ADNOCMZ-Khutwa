@@ -16,6 +16,7 @@ import { PREGENERATED_STORIES } from './stories';
 export const MOCK_FAMILY: Family = {
   id: 'mock-family',
   inviteCode: 'GHAF-2026',
+  memberUids: ['mock-may', 'mock-shamsa'],
   createdAt: Date.parse('2026-08-01T09:00:00Z'),
   members: [
     {

@@ -5,9 +5,9 @@
  * Exposes the current signed-in member. When Firebase isn't configured yet it
  * returns a stable fake user so the rest of the app is usable for UI work.
  *
- * TEAM TODO: build a real sign-in screen (Email/Password or Anonymous) that
- * calls `signInWithEmailAndPassword` / `signInAnonymously` from firebase/auth.
- * This hook already reacts to that via `onAuthStateChanged`.
+ * The sign-in UI lives in src/screens/sign-in-screen.tsx and calls the auth
+ * actions in services/firebase.ts; this hook just reflects the result via
+ * `onAuthStateChanged`.
  */
 
 import { useEffect, useState } from 'react';
@@ -30,24 +30,26 @@ export function useAuth(): { user: AuthUser | null; loading: boolean } {
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     let cancelled = false;
-    // Import lazily so an unconfigured project never touches firebase/auth.
-    import('firebase/auth').then(({ onAuthStateChanged }) => {
-      import('@/services/firebase').then(({ auth }) => {
-        const unsub = onAuthStateChanged(auth, (fbUser) => {
-          if (cancelled) return;
-          setUser(
-            fbUser
-              ? { uid: fbUser.uid, displayName: fbUser.displayName ?? 'Member' }
-              : null,
-          );
-          setLoading(false);
-        });
-        // store unsub on cleanup
-        return unsub;
+    let unsub = () => {};
+
+    // Import lazily so an unconfigured / web-prerender build never inits Firebase.
+    (async () => {
+      const { onAuthStateChanged } = await import('firebase/auth');
+      const { firebaseAuth } = await import('@/services/firebase');
+      unsub = onAuthStateChanged(firebaseAuth(), (fbUser) => {
+        if (cancelled) return;
+        setUser(
+          fbUser
+            ? { uid: fbUser.uid, displayName: fbUser.displayName ?? 'Member' }
+            : null,
+        );
+        setLoading(false);
       });
-    });
+    })();
+
     return () => {
       cancelled = true;
+      unsub();
     };
   }, []);
 

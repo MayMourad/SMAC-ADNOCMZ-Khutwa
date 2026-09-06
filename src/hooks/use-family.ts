@@ -4,9 +4,13 @@
  *
  * The current user's family group, kept live. Falls back to MOCK_FAMILY when
  * Firebase isn't configured.
+ *
+ * `family === null` with `loading === false` means "signed in but not in a
+ * family yet" — the AuthGate shows the family-setup screen in that case.
+ * Call `reload()` after creating or joining a family to pick it up.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { isFirebaseConfigured } from '@/config/env';
 import { MOCK_FAMILY } from '@/data/mock';
@@ -15,16 +19,21 @@ import type { Family } from '@/types/models';
 export function useFamily(uid: string | null): {
   family: Family | null;
   loading: boolean;
+  reload: () => void;
 } {
   const [family, setFamily] = useState<Family | null>(
     isFirebaseConfigured ? null : MOCK_FAMILY,
   );
   const [loading, setLoading] = useState(isFirebaseConfigured);
+  const [nonce, setNonce] = useState(0);
+
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !uid) return;
     let unsub = () => {};
     let cancelled = false;
+    setLoading(true);
 
     (async () => {
       const svc = await import('@/services/firebase');
@@ -41,7 +50,7 @@ export function useFamily(uid: string | null): {
       cancelled = true;
       unsub();
     };
-  }, [uid]);
+  }, [uid, nonce]);
 
-  return { family, loading };
+  return { family, loading, reload };
 }

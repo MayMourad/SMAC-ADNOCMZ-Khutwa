@@ -3,27 +3,42 @@
  * ================
  *
  * Single place where the Firebase app, Auth, and Firestore are created, plus
- * small typed helpers for reading/writing our four collections.
+ * small typed helpers for reading/writing our four collections and the auth
+ * actions the sign-in flow needs.
  *
  * We use the plain `firebase` JS SDK (not @react-native-firebase) because the
  * project runs in Expo's managed workflow / Expo Go, which the JS SDK supports
  * with no native build step.
  *
- * WHAT THE TEAM STILL NEEDS TO DO:
- *   1. Create a Firebase project, enable Email/Password (or Anonymous) auth and
- *      Cloud Firestore.
- *   2. Put the web app config into app.json > expo.extra.firebase (see config/env.ts).
- *   3. Add Firestore security rules so a member can only read/write their own
- *      family's documents (draft rules in docs/firestore.rules).
+ * LAZY INIT: nothing here runs at import time. `firebaseApp/Auth/Db()` create
+ * their instance on first use. This matters because Expo's static web export
+ * pre-renders routes in Node, where the React-Native-only auth persistence
+ * helper doesn't exist — so we only touch Firebase when a screen actually calls
+ * one of these functions.
  *
- * Everything below is real, working plumbing — only the credentials are missing.
+ * WHAT THE TEAM STILL NEEDS TO DO:
+ *   1. Create a Firebase project (see docs/firebase-setup.md).
+ *   2. Put the web config into app.json > expo.extra.firebase.
+ *   3. Publish docs/firestore.rules in the Firestore console.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApp, getApps, initializeApp } from 'firebase/app';
-// @ts-expect-error – getReactNativePersistence is exported by firebase/auth at
-// runtime but is missing from the published types in firebase 12.x.
-import { getReactNativePersistence, initializeAuth, type Auth } from 'firebase/auth';
+import { Platform } from 'react-native';
+
+import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  // @ts-expect-error – getReactNativePersistence is exported by firebase/auth at
+  // runtime (native build) but is missing from the published types in firebase 12.
+  getReactNativePersistence,
+  initializeAuth,
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  type Auth,
+} from 'firebase/auth';
 import {
   Timestamp,
   addDoc,
@@ -41,30 +56,81 @@ import {
 } from 'firebase/firestore';
 
 import { firebaseConfig } from '@/config/env';
+import { growthStageFromScore } from '@/logic/khutwaScore';
 import type {
   DailyStepEntry,
   EpochMillis,
   Family,
+  FamilyMember,
   Memory,
   TreeState,
 } from '@/types/models';
 
 // ---------------------------------------------------------------------------
-// App / Auth / Firestore singletons
+// Lazy singletons
 // ---------------------------------------------------------------------------
 
-/** Re-use the app across Fast Refresh reloads instead of re-initialising. */
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+let _app: FirebaseApp | undefined;
+let _auth: Auth | undefined;
+let _db: Firestore | undefined;
 
-/**
- * `initializeAuth` with AsyncStorage persistence keeps the user signed in
- * between app launches on device. On web we let Firebase pick its default.
- */
-export const auth: Auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+function firebaseApp(): FirebaseApp {
+  return (_app ??= getApps().length ? getApp() : initializeApp(firebaseConfig));
+}
 
-export const db: Firestore = getFirestore(app);
+/** Auth instance. On device it persists the session via AsyncStorage. */
+export function firebaseAuth(): Auth {
+  if (_auth) return _auth;
+  _auth =
+    Platform.OS === 'web'
+      ? getAuth(firebaseApp())
+      : initializeAuth(firebaseApp(), {
+          persistence: getReactNativePersistence(AsyncStorage),
+        });
+  return _auth;
+}
+
+export function firebaseDb(): Firestore {
+  return (_db ??= getFirestore(firebaseApp()));
+}
+
+// ---------------------------------------------------------------------------
+// Auth actions
+// ---------------------------------------------------------------------------
+//
+// Two ways in: anonymous (one tap, good for a demo) or email/password (so the
+// same person can sign in on a second device). `useAuth()` listens for the
+// result via onAuthStateChanged, so screens just call these.
+
+export async function signInAnon(): Promise<void> {
+  await signInAnonymously(firebaseAuth());
+}
+
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  displayName: string,
+): Promise<void> {
+  const cred = await createUserWithEmailAndPassword(
+    firebaseAuth(),
+    email.trim(),
+    password,
+  );
+  if (displayName.trim()) {
+    await updateProfile(cred.user, { displayName: displayName.trim() });
+  }
+}
+
+export async function signInWithEmail(
+  email: string,
+  password: string,
+): Promise<void> {
+  await signInWithEmailAndPassword(firebaseAuth(), email.trim(), password);
+}
+
+export async function signOutUser(): Promise<void> {
+  await signOut(firebaseAuth());
+}
 
 // ---------------------------------------------------------------------------
 // Timestamp <-> epoch-millis helpers
@@ -76,41 +142,127 @@ export const toMillis = (ts: Timestamp | number): EpochMillis =>
 export const fromMillis = (ms: EpochMillis): Timestamp => Timestamp.fromMillis(ms);
 
 // ---------------------------------------------------------------------------
-// Collection references (typed by name only — Firestore has no generics here)
+// Collection references (functions, so nothing runs before firebaseDb() is ready)
 // ---------------------------------------------------------------------------
 
-const familiesCol = collection(db, 'families');
-const memoriesCol = collection(db, 'memories');
-const treeDoc = (familyId: string) => doc(db, 'treeState', familyId);
-const stepsCol = (familyId: string) => collection(db, 'families', familyId, 'steps');
+const familiesCol = () => collection(firebaseDb(), 'families');
+const memoriesCol = () => collection(firebaseDb(), 'memories');
+const treeDoc = (familyId: string) => doc(firebaseDb(), 'treeState', familyId);
+const stepsCol = (familyId: string) =>
+  collection(firebaseDb(), 'families', familyId, 'steps');
 
 // ---------------------------------------------------------------------------
 // Family
 // ---------------------------------------------------------------------------
 
-/** Create a new family with the given first member as guardian. */
+/** Human-typeable invite code, e.g. "GHAF-7QK2". Avoids ambiguous chars. */
+export function makeInviteCode(): string {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let tail = '';
+  for (let i = 0; i < 4; i++) {
+    tail += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return `GHAF-${tail}`;
+}
+
+/**
+ * Low-level create. Prefer `bootstrapFamily` from the app — it also creates the
+ * tree document so the Home screen has something to read.
+ */
 export async function createFamily(
-  input: Omit<Family, 'id' | 'createdAt'>,
+  input: Omit<Family, 'id' | 'createdAt' | 'memberUids'>,
 ): Promise<string> {
-  const ref = await addDoc(familiesCol, {
+  const ref = await addDoc(familiesCol(), {
     ...input,
+    memberUids: input.members.map((m) => m.uid),
     createdAt: Timestamp.now(),
   });
   return ref.id;
 }
 
+/**
+ * Create a brand-new family for `uid` (as guardian) plus its starting tree.
+ * Returns the new familyId.
+ */
+export async function bootstrapFamily(
+  uid: string,
+  displayName: string,
+): Promise<string> {
+  const founder: FamilyMember = {
+    uid,
+    displayName: displayName.trim() || 'Member',
+    role: 'guardian',
+    shareLocation: true,
+    joinedAt: Date.now(),
+  };
+  const familyId = await createFamily({
+    inviteCode: makeInviteCode(),
+    members: [founder],
+  });
+  await initTreeState(familyId);
+  return familyId;
+}
+
+/**
+ * Add `uid` to the family that owns `inviteCode`. Throws if the code is unknown
+ * or the family is already full (3 members).
+ */
+export async function joinFamilyByCode(
+  inviteCode: string,
+  uid: string,
+  displayName: string,
+): Promise<string> {
+  const q = query(
+    familiesCol(),
+    where('inviteCode', '==', inviteCode.trim().toUpperCase()),
+  );
+  const snap = await getDocs(q);
+  const found = snap.docs[0];
+  if (!found) throw new Error('That invite code does not match any family.');
+
+  const family = found.data() as Family;
+  if (family.members.some((m) => m.uid === uid)) return found.id; // already in
+  if (family.members.length >= 3) throw new Error('This family is already full.');
+
+  const member: FamilyMember = {
+    uid,
+    displayName: displayName.trim() || 'Member',
+    role: 'member',
+    shareLocation: true,
+    joinedAt: Date.now(),
+  };
+  await updateDoc(found.ref, {
+    members: [...family.members, member],
+    memberUids: [...family.memberUids, uid],
+  });
+  return found.id;
+}
+
+/** Toggle one member's location-sharing flag (read-modify-write the array). */
+export async function setMemberShareLocation(
+  familyId: string,
+  uid: string,
+  shareLocation: boolean,
+): Promise<void> {
+  const ref = doc(familiesCol(), familyId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const members = (snap.data().members as FamilyMember[]).map((m) =>
+    m.uid === uid ? { ...m, shareLocation } : m,
+  );
+  await updateDoc(ref, { members });
+}
+
 export async function getFamily(familyId: string): Promise<Family | null> {
-  const snap = await getDoc(doc(familiesCol, familyId));
+  const snap = await getDoc(doc(familiesCol(), familyId));
   if (!snap.exists()) return null;
   const raw = snap.data();
   return { id: snap.id, ...raw, createdAt: toMillis(raw.createdAt) } as Family;
 }
 
-/** Find the family a user belongs to by scanning member uids. */
+/** Find the family a user belongs to via the flat `memberUids` mirror array. */
 export async function findFamilyForUser(uid: string): Promise<Family | null> {
-  // Firestore can't query "array of objects contains uid" directly, so we keep a
-  // flat `memberUids` mirror array on the family doc for this lookup.
-  const q = query(familiesCol, where('memberUids', 'array-contains', uid));
+  const q = query(familiesCol(), where('memberUids', 'array-contains', uid));
   const snap = await getDocs(q);
   const first = snap.docs[0];
   if (!first) return null;
@@ -122,7 +274,7 @@ export function subscribeToFamily(
   familyId: string,
   onChange: (family: Family | null) => void,
 ): () => void {
-  return onSnapshot(doc(familiesCol, familyId), (snap) => {
+  return onSnapshot(doc(familiesCol(), familyId), (snap) => {
     if (!snap.exists()) return onChange(null);
     const raw = snap.data();
     onChange({ id: snap.id, ...raw, createdAt: toMillis(raw.createdAt) } as Family);
@@ -132,6 +284,21 @@ export function subscribeToFamily(
 // ---------------------------------------------------------------------------
 // Tree state
 // ---------------------------------------------------------------------------
+
+/** Create the starting tree document for a new family (all scores at 0). */
+export async function initTreeState(familyId: string): Promise<void> {
+  const seed: TreeState = {
+    familyId,
+    khutwaScore: 0,
+    rootScore: 0,
+    bloomScore: 0,
+    heritageScore: 0,
+    growthStage: growthStageFromScore(0),
+    isBlooming: false,
+    updatedAt: Date.now(),
+  };
+  await setDoc(treeDoc(familyId), { ...seed, updatedAt: Timestamp.now() });
+}
 
 export async function getTreeState(familyId: string): Promise<TreeState | null> {
   const snap = await getDoc(treeDoc(familyId));
@@ -172,7 +339,7 @@ export function subscribeToTreeState(
 // ---------------------------------------------------------------------------
 
 export async function listMemories(): Promise<Memory[]> {
-  const snap = await getDocs(memoriesCol);
+  const snap = await getDocs(memoriesCol());
   return snap.docs.map((d) => {
     const raw = d.data();
     return {
@@ -184,11 +351,8 @@ export async function listMemories(): Promise<Memory[]> {
 }
 
 /** Mark a memory as unlocked by a member. No-op if it was already unlocked. */
-export async function unlockMemory(
-  memoryId: string,
-  uid: string,
-): Promise<void> {
-  const ref = doc(memoriesCol, memoryId);
+export async function unlockMemory(memoryId: string, uid: string): Promise<void> {
+  const ref = doc(memoriesCol(), memoryId);
   const snap = await getDoc(ref);
   if (snap.exists() && snap.data().unlockedAt) return; // first unlock wins
   await updateDoc(ref, { unlockedBy: uid, unlockedAt: Timestamp.now() });
@@ -197,7 +361,7 @@ export async function unlockMemory(
 export function subscribeToMemories(
   onChange: (memories: Memory[]) => void,
 ): () => void {
-  return onSnapshot(memoriesCol, (snap) => {
+  return onSnapshot(memoriesCol(), (snap) => {
     onChange(
       snap.docs.map((d) => {
         const raw = d.data();

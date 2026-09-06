@@ -59,6 +59,12 @@ export interface Family {
   inviteCode: string;
   /** All linked members. Kept as an array because a family is tiny (2–3 people). */
   members: FamilyMember[];
+  /**
+   * Flat mirror of `members[].uid`. Firestore can't query "array of objects
+   * contains value", so this powers `findFamilyForUser` (array-contains) and the
+   * security rules. Always write it alongside `members`.
+   */
+  memberUids: string[];
   createdAt: EpochMillis;
 }
 
