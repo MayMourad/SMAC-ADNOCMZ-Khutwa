@@ -9,28 +9,40 @@
  *   - a short, plain explanation of what stays on the device
  */
 
-import { ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { isFirebaseConfigured } from '@/config/env';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useFamily } from '@/hooks/use-family';
 import { useTheme } from '@/hooks/use-theme';
+import { setMemberShareLocation, signOutUser } from '@/services/firebase';
 
 export function FamilyScreen() {
   const theme = useTheme();
   const { user } = useAuth();
   const { family } = useFamily(user?.uid ?? null);
+  const [pendingUid, setPendingUid] = useState<string | null>(null);
 
   const me = family?.members.find((m) => m.uid === user?.uid);
   const iAmGuardian = me?.role === 'guardian';
 
-  const setShareLocation = (uid: string, value: boolean) => {
-    // TEAM TODO: persist to Firestore — updateDoc(family/<id>, members[...])
-    // For now this is a visual stub so the interaction is demoable.
-    console.log('[FamilyScreen] setShareLocation', uid, value);
+  const setShareLocation = async (uid: string, value: boolean) => {
+    if (!family) return;
+    if (!isFirebaseConfigured) {
+      // Mock mode: no backend to write to; the switch is visual only.
+      return;
+    }
+    setPendingUid(uid);
+    try {
+      await setMemberShareLocation(family.id, uid, value);
+    } finally {
+      setPendingUid(null);
+    }
   };
 
   return (
@@ -64,7 +76,7 @@ export function FamilyScreen() {
                   </View>
                   <Switch
                     value={m.shareLocation}
-                    disabled={!canToggle}
+                    disabled={!canToggle || pendingUid === m.uid}
                     onValueChange={(v) => setShareLocation(m.uid, v)}
                   />
                 </View>
@@ -82,6 +94,16 @@ export function FamilyScreen() {
               location is never sent to an AI service.
             </ThemedText>
           </ThemedView>
+
+          {isFirebaseConfigured && (
+            <Pressable
+              onPress={() => signOutUser()}
+              style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.6 }]}>
+              <ThemedText type="link" themeColor="textSecondary">
+                Sign out
+              </ThemedText>
+            </Pressable>
+          )}
         </SafeAreaView>
       </ScrollView>
     </ThemedView>
@@ -112,5 +134,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     paddingVertical: Spacing.two,
+  },
+  signOut: {
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
   },
 });
