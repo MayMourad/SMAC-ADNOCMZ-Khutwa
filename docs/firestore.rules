@@ -41,6 +41,11 @@ service cloud.firestore {
         allow write: if isFamilyMember(familyId)
           && stepId.split('_')[0] == request.auth.uid;
       }
+
+      // --- rolling week-stats counters (stats/week) -----------------
+      match /stats/{statId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
     }
 
     // --- treeState -----------------------------------------------------

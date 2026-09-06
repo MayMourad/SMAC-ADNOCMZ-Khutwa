@@ -56,15 +56,20 @@ import {
 } from 'firebase/firestore';
 
 import { firebaseConfig } from '@/config/env';
+import { isoDaysAgo } from '@/logic/aggregateWeek';
 import { growthStageFromScore } from '@/logic/khutwaScore';
-import type {
-  DailyStepEntry,
-  EpochMillis,
-  Family,
-  FamilyMember,
-  Memory,
-  TreeState,
+import {
+  EMPTY_WEEK_STATS,
+  type DailyStepEntry,
+  type EpochMillis,
+  type Family,
+  type FamilyMember,
+  type Memory,
+  type TreeState,
+  type WeekStats,
 } from '@/types/models';
+
+type WeekStatKey = keyof typeof EMPTY_WEEK_STATS;
 
 // ---------------------------------------------------------------------------
 // Lazy singletons
@@ -150,6 +155,8 @@ const memoriesCol = () => collection(firebaseDb(), 'memories');
 const treeDoc = (familyId: string) => doc(firebaseDb(), 'treeState', familyId);
 const stepsCol = (familyId: string) =>
   collection(firebaseDb(), 'families', familyId, 'steps');
+const weekStatsDoc = (familyId: string) =>
+  doc(firebaseDb(), 'families', familyId, 'stats', 'week');
 
 // ---------------------------------------------------------------------------
 // Family
@@ -200,6 +207,7 @@ export async function bootstrapFamily(
     members: [founder],
   });
   await initTreeState(familyId);
+  await getWeekStats(familyId); // creates the week-stats doc with zeros
   return familyId;
 }
 
@@ -331,6 +339,56 @@ export function subscribeToTreeState(
     if (!snap.exists()) return onChange(null);
     const raw = snap.data();
     onChange({ ...raw, updatedAt: toMillis(raw.updatedAt) } as TreeState);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Week stats (rolling counters that feed the Khutwa Score)
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the current week-stats doc, creating it (zeroed) if missing. Also does a
+ * lazy weekly reset: if the stored week started more than 7 days ago, the
+ * counters are cleared and the window start is moved to today.
+ */
+export async function getWeekStats(familyId: string): Promise<WeekStats> {
+  const ref = weekStatsDoc(familyId);
+  const snap = await getDoc(ref);
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (!snap.exists()) {
+    const fresh: WeekStats = {
+      ...EMPTY_WEEK_STATS,
+      weekStartedOn: today,
+      updatedAt: Date.now(),
+    };
+    await setDoc(ref, { ...fresh, updatedAt: Timestamp.now() });
+    return fresh;
+  }
+
+  const raw = snap.data() as WeekStats;
+  if (raw.weekStartedOn < isoDaysAgo(7)) {
+    const reset: WeekStats = {
+      ...EMPTY_WEEK_STATS,
+      weekStartedOn: today,
+      updatedAt: Date.now(),
+    };
+    await setDoc(ref, { ...reset, updatedAt: Timestamp.now() });
+    return reset;
+  }
+  return { ...raw, updatedAt: toMillis(raw.updatedAt) };
+}
+
+/** Add `by` (default 1) to one week-stat counter. */
+export async function bumpWeekStat(
+  familyId: string,
+  key: WeekStatKey,
+  by = 1,
+): Promise<void> {
+  const current = await getWeekStats(familyId);
+  await updateDoc(weekStatsDoc(familyId), {
+    [key]: (current[key] as number) + by,
+    updatedAt: Timestamp.now(),
   });
 }
 

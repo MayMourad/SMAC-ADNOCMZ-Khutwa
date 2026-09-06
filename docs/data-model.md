@@ -8,6 +8,7 @@ collection layout, the id conventions, and the one non-obvious field.
 ```
 families/{familyId}                      -> Family
 families/{familyId}/steps/{uid}_{date}   -> DailyStepEntry
+families/{familyId}/stats/week           -> WeekStats        (rolling counters)
 treeState/{familyId}                     -> TreeState        (doc id == familyId)
 memories/{memoryId}                      -> Memory
 ```
@@ -33,6 +34,24 @@ so re-syncing the same day overwrites instead of duplicating.
 | `steps` | number | |
 | `source` | `'healthkit'\|'googlefit'\|'expo-pedometer'\|'manual'` | |
 | `syncedAt` | Timestamp | |
+
+### families/{familyId}/stats/week — `WeekStats`
+
+Counters for the current 7-day window that can't be rebuilt from other
+documents. The app bumps them as events happen (`bumpWeekStat`); `getWeekStats`
+does a lazy reset once the window is older than 7 days.
+
+| Field | Type | Notes |
+|---|---|---|
+| `togetherMoments` | number | +1 each time the tree blooms (family co-located). |
+| `coMovementSessions` | number | 2+ members walking together. |
+| `activeMinutes` | number | Active walking minutes, any member. |
+| `storyContributions` | number | Voice/text memories added to a place. |
+| `weekStartedOn` | string | ISO date the window started. |
+| `updatedAt` | Timestamp | |
+
+`services/scoreSync.ts` reads this + step rows + memories, runs
+`logic/aggregateWeek.ts`, then `logic/khutwaScore.ts`, and writes `treeState`.
 
 ### treeState/{familyId} — `TreeState`
 
