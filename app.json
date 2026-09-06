@@ -32,11 +32,39 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Khutwa uses your location to unlock family stories at nearby heritage places and to bloom your family tree when you are together.",
+          "locationAlwaysAndWhenInUsePermission": "Khutwa checks for nearby family places in the background so a story can be ready when you arrive. Location stays on your device and is never shared outside your family.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Khutwa reads your step count so your walks help grow the shared family tree."
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "firebase": {
+        "apiKey": "",
+        "authDomain": "",
+        "projectId": "",
+        "storageBucket": "",
+        "messagingSenderId": "",
+        "appId": ""
+      },
+      "llm": {
+        "provider": "",
+        "model": ""
+      }
     }
   }
 }
