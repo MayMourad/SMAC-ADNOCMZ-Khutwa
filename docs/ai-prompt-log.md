@@ -101,12 +101,48 @@ generated the application as a whole.
   `package.json`, `docs/{firebase-setup,data-model,firestore.rules}`.
 
 ### Log 4: Location story generation
-- Date: _pending_
-- Tool / model: _pending — record the exact model, e.g. gemini-2.5-flash / gpt-4o / claude-sonnet-5_
+- Date: 2026-09-07
+- Tool / model: Claude Sonnet 5 (via Claude Code)
 - Type: story-generation
-- Prompt(s): _the output of `scripts/generate-stories.ts` prints each prompt to
-  stderr — paste them here verbatim_
-- What we got back: _per-location draft narrations_
-- How it was used: _which stories kept as-is, which edited (and how), which
-  regenerated_
-- Files touched: `src/data/stories.ts`
+- Prompt(s): the single template below (`STORY_PROMPT_TEMPLATE` in
+  `src/services/llm.ts`), filled once per location by `buildStoryPrompt()`.
+  Family context used for every location: `familyName` = "the family",
+  `presentMembers` = "the family", `familyNote` = "" (empty), `language` =
+  "en-AE".
+
+  ```
+  You are a warm Emirati family storyteller.
+  Write a short spoken narration (45–75 words) about the place below, for a
+  family walking there together during the UAE Year of Family 2026.
+
+  Place: {{label}}
+  Heritage / bonding angle: {{heritageAngle}}
+  Family: {{familyName}}
+  People present: {{presentMembers}}
+  Family's own memory of this place (may be empty): "{{familyNote}}"
+  Language: {{language}}
+
+  Rules:
+  - Speak directly to the family ("As you stand here together...").
+  - Weave in the heritage angle and, if present, their own memory.
+  - Warm and calm, not touristy. No dates or statistics. No emojis.
+  - One paragraph. End on a gentle invitation to look around or talk to each other.
+  ```
+
+  `{{label}}` / `{{heritageAngle}}` per location come from `src/data/locations.ts`
+  (the 8 `CURATED_LOCATIONS`).
+- What we got back: 8 English narrations, ~55–70 words each, one per curated
+  location (Qasr Al Hosn, Sheikh Zayed Grand Mosque, Abu Dhabi Corniche,
+  Heritage Village, Umm Al Emarat Park, Founder's Memorial, Al Maqta Fort,
+  Al Bateen Dhow Yard). Full text is in `src/data/stories.ts`.
+- How it was used: written verbatim into `PREGENERATED_STORIES` in
+  `src/data/stories.ts` and seeded into the Firestore `memories` collection via
+  `scripts/seed-firestore.ts`. They are marked **AI-drafted, not yet
+  team-reviewed** in that file. Before the demo the team will read each aloud,
+  verify every claim (the prompt deliberately bans dates/statistics to limit
+  factual risk), adjust tone, and make sure each member can speak to each story
+  in the Q&A. Arabic (`ar-AE`) narrations are still to be produced.
+- Note on the script: `scripts/generate-stories.ts` builds these same prompts
+  but its `callModel()` HTTP call is still a stub — wire it to a provider +
+  API key only if you want to regenerate/expand later.
+- Files touched: `src/data/stories.ts` (+ re-seed of Firestore `memories`).
