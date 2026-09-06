@@ -88,11 +88,17 @@ generated the application as a whole.
   10/10, and the web build serves every route (mock mode). The Firebase config
   itself was NOT filled in — no project exists yet; `docs/firebase-setup.md` is
   the step-by-step for the team to create it and paste the six values.
-- Files touched: `src/services/firebase.ts`, `src/types/models.ts`,
-  `src/hooks/use-auth.ts`, `src/hooks/use-family.ts`, `src/data/mock.ts`,
-  `src/screens/{sign-in,family-setup,family}-screen.tsx`,
+- Follow-up in the same session ("best possible course of action"): closed the
+  score loop — `logic/aggregateWeek.ts` (rolling-7-day aggregation, 8 tests),
+  a `WeekStats` counter doc with `getWeekStats` / `bumpWeekStat`, and
+  `services/scoreSync.ts` `recomputeTree()` wired into the Walk and Home
+  screens so real activity now drives the tree. `npm test` 18/18.
+- Files touched: `src/services/firebase.ts`, `src/services/scoreSync.ts`,
+  `src/types/models.ts`, `src/hooks/use-auth.ts`, `src/hooks/use-family.ts`,
+  `src/data/mock.ts`, `src/screens/{sign-in,family-setup,family,walk,home}-screen.tsx`,
   `src/components/auth-gate.tsx`, `src/app/{_layout,explore}.tsx`,
-  `src/logic/khutwaScore.test.ts`, `package.json`, `docs/firebase-setup.md`.
+  `src/logic/aggregateWeek.ts`, `src/logic/{khutwaScore,aggregateWeek}.test.ts`,
+  `package.json`, `docs/{firebase-setup,data-model,firestore.rules}`.
 
 ### Log 4: Location story generation
 - Date: _pending_
