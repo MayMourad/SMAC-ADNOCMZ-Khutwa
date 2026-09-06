@@ -68,7 +68,33 @@ generated the application as a whole.
   `components/ui/collapsible`, `components/web-badge`, `components/themed-*`;
   plus `app.json`, `docs/*`, `scripts/*`, `.claude/launch.json`.
 
-### Log 3: Location story generation
+### Log 3: Auth flow, family create/join, and Khutwa Score tests
+- Date: 2026-09-06
+- Tool / model: Claude Sonnet 5 (Claude Code)
+- Type: dev-assistance
+- Prompt(s): "Fill in the Firebase config in app.json, review the GitHub
+  commits/pulls/push, and go ahead with the next steps" — covering: a real
+  sign-in flow (Anonymous + Email/Password), a family create / join-by-invite
+  flow with the `memberUids` mirror array, persisting the Family screen's
+  location-sharing toggle to Firestore, a jest-expo test setup with unit tests
+  for `khutwaScore.ts`, and tidying the leftover `explore` route.
+- What we got back: `src/services/firebase.ts` reworked to lazy init + auth
+  actions + `bootstrapFamily` / `joinFamilyByCode` / `setMemberShareLocation` /
+  `initTreeState`; new `src/screens/sign-in-screen.tsx`,
+  `src/screens/family-setup-screen.tsx`, `src/components/auth-gate.tsx`;
+  `src/logic/khutwaScore.test.ts` (10 tests); `docs/firebase-setup.md`;
+  `explore.tsx` reduced to a redirect.
+- How it was used: reviewed each file. `tsc --noEmit` passes, `npm test` passes
+  10/10, and the web build serves every route (mock mode). The Firebase config
+  itself was NOT filled in — no project exists yet; `docs/firebase-setup.md` is
+  the step-by-step for the team to create it and paste the six values.
+- Files touched: `src/services/firebase.ts`, `src/types/models.ts`,
+  `src/hooks/use-auth.ts`, `src/hooks/use-family.ts`, `src/data/mock.ts`,
+  `src/screens/{sign-in,family-setup,family}-screen.tsx`,
+  `src/components/auth-gate.tsx`, `src/app/{_layout,explore}.tsx`,
+  `src/logic/khutwaScore.test.ts`, `package.json`, `docs/firebase-setup.md`.
+
+### Log 4: Location story generation
 - Date: _pending_
 - Tool / model: _pending — record the exact model, e.g. gemini-2.5-flash / gpt-4o / claude-sonnet-5_
 - Type: story-generation
