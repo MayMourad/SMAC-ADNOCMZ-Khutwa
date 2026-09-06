@@ -1,3 +1,12 @@
+/**
+ * Bottom tab bar (web)
+ * ====================
+ *
+ * Web build of the same four tabs as `app-tabs.tsx`. Native tabs don't render on
+ * web, so this uses the JS-based `expo-router/ui` primitives. Kept intentionally
+ * plain — the phone is the real target; web is just for quick layout checks.
+ */
+
 import {
   Tabs,
   TabList,
@@ -6,14 +15,19 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
-import { SymbolView } from 'expo-symbols';
 import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
 
-import { ExternalLink } from './external-link';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+
+const TABS = [
+  { name: 'home', href: '/', label: 'Home' },
+  { name: 'walk', href: '/walk', label: 'Walk' },
+  { name: 'stories', href: '/stories', label: 'Stories' },
+  { name: 'family', href: '/family', label: 'Family' },
+] as const;
 
 export default function AppTabs() {
   return (
@@ -21,12 +35,11 @@ export default function AppTabs() {
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
-          <TabTrigger name="home" href="/" asChild>
-            <TabButton>Home</TabButton>
-          </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Explore</TabButton>
-          </TabTrigger>
+          {TABS.map((t) => (
+            <TabTrigger key={t.name} name={t.name} href={t.href} asChild>
+              <TabButton>{t.label}</TabButton>
+            </TabTrigger>
+          ))}
         </CustomTabList>
       </TabList>
     </Tabs>
@@ -48,28 +61,14 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 }
 
 export function CustomTabList(props: TabListProps) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-
+  useColorScheme(); // re-render on scheme change
   return (
     <View {...props} style={styles.tabListContainer}>
       <ThemedView type="backgroundElement" style={styles.innerContainer}>
         <ThemedText type="smallBold" style={styles.brandText}>
-          Expo Starter
+          Khutwa
         </ThemedText>
-
         {props.children}
-
-        <ExternalLink href="https://docs.expo.dev" asChild>
-          <Pressable style={styles.externalPressable}>
-            <ThemedText type="link">Docs</ThemedText>
-            <SymbolView
-              tintColor={colors.text}
-              name={{ ios: 'arrow.up.right.square', web: 'link' }}
-              size={12}
-            />
-          </Pressable>
-        </ExternalLink>
       </ThemedView>
     </View>
   );
@@ -104,12 +103,5 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.three,
     borderRadius: Spacing.three,
-  },
-  externalPressable: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.one,
-    marginLeft: Spacing.three,
   },
 });
