@@ -36,13 +36,22 @@ export function useFamily(uid: string | null): {
     setLoading(true);
 
     (async () => {
-      const svc = await import('@/services/firebase');
-      const found = await svc.findFamilyForUser(uid);
-      if (cancelled) return;
-      setFamily(found);
-      setLoading(false);
-      if (found) {
-        unsub = svc.subscribeToFamily(found.id, (f) => !cancelled && setFamily(f));
+      try {
+        const svc = await import('@/services/firebase');
+        const found = await svc.findFamilyForUser(uid);
+        if (cancelled) return;
+        setFamily(found);
+        setLoading(false);
+        if (found) {
+          unsub = svc.subscribeToFamily(found.id, (f) => !cancelled && setFamily(f));
+        }
+      } catch (err) {
+        // Usually a transient permission error while auth settles on cold load —
+        // the family subscription (once attached) recovers on its own.
+        if (!cancelled) {
+          console.warn('[useFamily]', (err as Error)?.message ?? err);
+          setLoading(false);
+        }
       }
     })();
 

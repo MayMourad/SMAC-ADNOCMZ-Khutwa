@@ -278,15 +278,24 @@ export async function findFamilyForUser(uid: string): Promise<Family | null> {
   return { id: first.id, ...raw, createdAt: toMillis(raw.createdAt) } as Family;
 }
 
+/** Shared onSnapshot error handler — a transient permission error on a cold
+ *  load shouldn't crash; the listener recovers once auth settles. */
+const warnSnapshot = (where: string) => (err: unknown) =>
+  console.warn(`[firebase] ${where} listener:`, (err as Error)?.message ?? err);
+
 export function subscribeToFamily(
   familyId: string,
   onChange: (family: Family | null) => void,
 ): () => void {
-  return onSnapshot(doc(familiesCol(), familyId), (snap) => {
-    if (!snap.exists()) return onChange(null);
-    const raw = snap.data();
-    onChange({ id: snap.id, ...raw, createdAt: toMillis(raw.createdAt) } as Family);
-  });
+  return onSnapshot(
+    doc(familiesCol(), familyId),
+    (snap) => {
+      if (!snap.exists()) return onChange(null);
+      const raw = snap.data();
+      onChange({ id: snap.id, ...raw, createdAt: toMillis(raw.createdAt) } as Family);
+    },
+    warnSnapshot('family'),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -335,11 +344,15 @@ export function subscribeToTreeState(
   familyId: string,
   onChange: (tree: TreeState | null) => void,
 ): () => void {
-  return onSnapshot(treeDoc(familyId), (snap) => {
-    if (!snap.exists()) return onChange(null);
-    const raw = snap.data();
-    onChange({ ...raw, updatedAt: toMillis(raw.updatedAt) } as TreeState);
-  });
+  return onSnapshot(
+    treeDoc(familyId),
+    (snap) => {
+      if (!snap.exists()) return onChange(null);
+      const raw = snap.data();
+      onChange({ ...raw, updatedAt: toMillis(raw.updatedAt) } as TreeState);
+    },
+    warnSnapshot('treeState'),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -419,18 +432,22 @@ export async function unlockMemory(memoryId: string, uid: string): Promise<void>
 export function subscribeToMemories(
   onChange: (memories: Memory[]) => void,
 ): () => void {
-  return onSnapshot(memoriesCol(), (snap) => {
-    onChange(
-      snap.docs.map((d) => {
-        const raw = d.data();
-        return {
-          id: d.id,
-          ...raw,
-          unlockedAt: raw.unlockedAt ? toMillis(raw.unlockedAt) : null,
-        } as Memory;
-      }),
-    );
-  });
+  return onSnapshot(
+    memoriesCol(),
+    (snap) => {
+      onChange(
+        snap.docs.map((d) => {
+          const raw = d.data();
+          return {
+            id: d.id,
+            ...raw,
+            unlockedAt: raw.unlockedAt ? toMillis(raw.unlockedAt) : null,
+          } as Memory;
+        }),
+      );
+    },
+    warnSnapshot('memories'),
+  );
 }
 
 // ---------------------------------------------------------------------------
