@@ -40,6 +40,10 @@ See `/docs/idea-brief.md` for the full refined idea brief, scope rationale, and 
 - **AI story generation:** cloud LLM API, used during development to pre-generate cached stories (see `/docs/ai-prompt-log.md`)
 - **Builds:** EAS Build
 
+## Locations
+- **Abu Dhabi:** Featuring 8 locations across the Emirate of Abu Dhabi (see `/docs/locations`)
+
+
 ## AI Usage Disclosure
 
 Per competition rules, all AI usage during development is logged with prompts in `/docs/ai-prompt-log.md`. This includes:
