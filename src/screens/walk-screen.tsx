@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { isFirebaseConfigured } from '@/config/env';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { CURATED_LOCATIONS, getLocation } from '@/data/locations';
 import { useAuth } from '@/hooks/use-auth';
@@ -33,6 +34,7 @@ import {
   type MemoryRegion,
 } from '@/services/location';
 import { getStory } from '@/services/llm';
+import { recomputeTree } from '@/services/scoreSync';
 import { narrate, stopNarration } from '@/services/speech';
 import { manualSteps, watchSteps } from '@/services/steps';
 
@@ -70,10 +72,12 @@ export function WalkScreen() {
       });
       narrate(story.text, { onDone: () => setStatus('Story finished.') });
 
-      // First device to arrive unlocks it for the whole family.
+      // First device to arrive unlocks it for the whole family, then the
+      // score is recomputed so the tree reflects the new memory.
       if (family && user) {
         const svc = await import('@/services/firebase').catch(() => null);
         await svc?.unlockMemory(locationId, user.uid).catch(() => {});
+        await recomputeTree(family.id).catch(() => {});
       }
     });
     return unsub;
@@ -108,6 +112,18 @@ export function WalkScreen() {
 
   useEffect(() => () => void endWalk(), [endWalk]);
 
+  // --- "we're together" check-in -> bloom + count the moment ------------
+  const toggleTogether = useCallback(async () => {
+    const turningOn = !tree?.isBlooming;
+    bloom(turningOn);
+    setStatus(turningOn ? 'The tree is blooming 🌸' : 'Bloom cleared.');
+    if (turningOn && isFirebaseConfigured && family) {
+      const svc = await import('@/services/firebase').catch(() => null);
+      await svc?.bumpWeekStat(family.id, 'togetherMoments').catch(() => {});
+      await recomputeTree(family.id).catch(() => {});
+    }
+  }, [tree?.isBlooming, bloom, family]);
+
   // --- manual step entry (testing / demo) --------------------------------
   const submitManual = useCallback(async () => {
     const n = parseInt(manual, 10);
@@ -115,6 +131,7 @@ export function WalkScreen() {
     const entry = manualSteps(user.uid, n);
     const svc = await import('@/services/firebase').catch(() => null);
     await svc?.syncDailySteps(family.id, entry).catch(() => {});
+    await recomputeTree(family.id).catch(() => {});
     setStatus(`Logged ${n} steps for ${user.displayName}.`);
     setManual('');
   }, [manual, family, user]);
@@ -149,10 +166,7 @@ export function WalkScreen() {
               When you&apos;re walking as a family, check in together to make the tree bloom.
             </ThemedText>
             <Pressable
-              onPress={() => {
-                bloom(!tree?.isBlooming);
-                setStatus(tree?.isBlooming ? 'Bloom cleared.' : 'The tree is blooming 🌸');
-              }}
+              onPress={toggleTogether}
               style={({ pressed }) => [
                 styles.button,
                 { backgroundColor: theme.backgroundSelected, opacity: pressed ? 0.7 : 1 },

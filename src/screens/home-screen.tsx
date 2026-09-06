@@ -11,6 +11,7 @@
  * so this screen renders fully during UI development.
  */
 
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,17 +20,24 @@ import { ScoreBar } from '@/components/score-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { MOCK_MEMORIES } from '@/data/mock';
 import { useAuth } from '@/hooks/use-auth';
 import { useFamily } from '@/hooks/use-family';
+import { useMemories } from '@/hooks/use-memories';
 import { useTreeState } from '@/hooks/use-tree-state';
+import { recomputeTree } from '@/services/scoreSync';
 
 export function HomeScreen() {
   const { user } = useAuth();
   const { family } = useFamily(user?.uid ?? null);
   const { tree } = useTreeState(family?.id ?? null);
+  const memories = useMemories();
 
-  const unlocked = MOCK_MEMORIES.filter((m) => m.unlockedAt).length;
+  // Refresh the score from the week's activity whenever Home opens.
+  useEffect(() => {
+    if (family?.id) recomputeTree(family.id).catch(() => {});
+  }, [family?.id]);
+
+  const unlocked = memories.filter((m) => m.unlockedAt).length;
 
   if (!family || !tree) {
     return (
@@ -66,7 +74,7 @@ export function HomeScreen() {
               {unlocked}
               <ThemedText type="small" themeColor="textSecondary">
                 {' '}
-                / {MOCK_MEMORIES.length}
+                / {memories.length}
               </ThemedText>
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
