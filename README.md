@@ -27,18 +27,22 @@ Families link into one shared group. As they move, their combined steps grow a t
 - **Geofence trigger + narration** — the app detects proximity to a stored location and plays its story via text-to-speech.
 - **"Together" bloom state** — when family members are co-located, the tree visibly blooms.
 - **Privacy-first by design** — location data stays on-device by default; nothing is shared outside the family group; parental control over what younger members' accounts record.
+- **English & Arabic** — full in-app language toggle (خطوة), with right-aligned Arabic text.
+- **"Oasis" visual design** — warm sand-and-Ghaf-green palette, Rubik + Fraunces type, an illustrated growth-stage tree that sways and glows when the family is together.
 
 See `/docs/idea-brief.md` for the full refined idea brief, scope rationale, and cut/future features.
 
 ## Tech Stack
 
 - **Framework:** React Native (Expo, managed workflow)
+- **UI/motion:** `react-native-svg`, `react-native-reanimated`, `expo-linear-gradient`, `lucide-react-native`, `@expo-google-fonts` (Rubik + Fraunces)
+- **i18n:** custom lightweight table (`src/i18n`) with persisted EN/AR toggle + soft RTL
 - **Steps/movement:** `expo-sensors`
 - **Geofencing/location:** `expo-location`
 - **Text-to-speech:** `expo-speech`
 - **Backend/data:** Firebase (Auth + Firestore)
-- **AI story generation:** cloud LLM API, used during development to pre-generate cached stories (see `/docs/ai-prompt-log.md`)
-- **Builds:** EAS Build
+- **AI story generation:** cloud LLM, used during development to pre-generate cached stories (see `/docs/ai-prompt-log.md`)
+- **Builds:** EAS Build (`eas.json`)
 
 ## Locations
 - **Abu Dhabi:** Featuring 8 locations across the Emirate of Abu Dhabi (see `/docs/locations`)
