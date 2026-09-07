@@ -11,12 +11,6 @@
  *   user, family still loading  -> full-screen spinner
  *   user but no family         -> <FamilySetupScreen>
  *   user + family              -> nothing (the tabs underneath show through)
- *
- * Why an overlay instead of conditionally rendering the navigator: expo-router
- * wants the root layout to always render a navigator/Slot. Keeping <AppTabs/>
- * mounted at all times and painting over it keeps routing happy on every
- * platform. The screens underneath are inert while unauthenticated (their hooks
- * early-return without a user).
  */
 
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -25,6 +19,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { isFirebaseConfigured } from '@/config/env';
 import { Spacing } from '@/constants/theme';
+import { useLang } from '@/i18n';
 import { useAuth } from '@/hooks/use-auth';
 import { useFamily } from '@/hooks/use-family';
 import { FamilySetupScreen } from '@/screens/family-setup-screen';
@@ -39,7 +34,7 @@ function Loading({ label }: { label: string }) {
     <FullScreen>
       <ThemedView style={styles.center}>
         <ActivityIndicator />
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="callout" color="textSecondary">
           {label}
         </ThemedText>
       </ThemedView>
@@ -48,16 +43,17 @@ function Loading({ label }: { label: string }) {
 }
 
 export function AuthOverlay() {
+  const { t } = useLang();
   const { user, loading: authLoading } = useAuth();
   const { family, loading: familyLoading, reload } = useFamily(user?.uid ?? null);
 
-  if (!isFirebaseConfigured) return null; // mock mode — no gate
-  if (authLoading) return <Loading label="Starting Khutwa…" />;
+  if (!isFirebaseConfigured) return null;
+  if (authLoading) return <Loading label={t('auth.starting')} />;
   if (!user) return <FullScreen><SignInScreen /></FullScreen>;
-  if (familyLoading) return <Loading label="Finding your family…" />;
+  if (familyLoading) return <Loading label={t('setup.finding')} />;
   if (!family) return <FullScreen><FamilySetupScreen onDone={reload} /></FullScreen>;
 
-  return null; // signed in + in a family — show the app underneath
+  return null;
 }
 
 const styles = StyleSheet.create({

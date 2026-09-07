@@ -1,28 +1,83 @@
-import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
+/**
+ * ThemedText
+ * ==========
+ *
+ * The only Text component screens use. Applies:
+ *  - a type-scale variant (`type`) from constants/theme.Type
+ *  - a themed colour (`color`), default = primary ink
+ *  - RTL: for Arabic it sets writingDirection + right alignment, and swaps any
+ *    serif variant to the sans family (Fraunces has no Arabic glyphs)
+ *
+ * A few legacy `type` names + the `themeColor` prop are still accepted so the
+ * Expo starter's leftover helper components keep compiling; new code should use
+ * the variants in `TypeVariant` and the `color` prop.
+ */
 
-import { Fonts, ThemeColor } from '@/constants/theme';
+import { StyleSheet, Text, type TextProps } from 'react-native';
+
+import { Fonts, Type, type ThemeColor, type TypeVariant } from '@/constants/theme';
+import { useLang } from '@/i18n';
 import { useTheme } from '@/hooks/use-theme';
 
-export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary' | 'code';
-  themeColor?: ThemeColor;
+type LegacyType = 'default' | 'smallBold' | 'link' | 'linkPrimary' | 'code';
+const LEGACY_TYPE: Record<LegacyType, TypeVariant> = {
+  default: 'body',
+  smallBold: 'callout',
+  link: 'callout',
+  linkPrimary: 'callout',
+  code: 'mono',
 };
 
-export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
+export type ThemedTextProps = TextProps & {
+  type?: TypeVariant | LegacyType;
+  color?: ThemeColor;
+  /** @deprecated use `color` */
+  themeColor?: ThemeColor;
+  /** Force left alignment even in Arabic (e.g. codes, numbers). */
+  ltr?: boolean;
+  /** UPPERCASE + wider tracking — pairs with the `label` type. */
+  uppercase?: boolean;
+};
+
+const SERIF_TO_SANS: Record<string, string> = {
+  [Fonts.serif]: Fonts.sans,
+  [Fonts.serifMedium]: Fonts.sansMedium,
+  [Fonts.serifSemiBold]: Fonts.sansSemiBold,
+};
+
+export function ThemedText({
+  style,
+  type = 'body',
+  color,
+  themeColor,
+  ltr = false,
+  uppercase = false,
+  ...rest
+}: ThemedTextProps) {
   const theme = useTheme();
+  const { isRTL } = useLang();
+
+  const resolvedType: TypeVariant =
+    type in LEGACY_TYPE ? LEGACY_TYPE[type as LegacyType] : (type as TypeVariant);
+  const variant = Type[resolvedType];
+
+  let fontFamily = variant.fontFamily;
+  if (isRTL && SERIF_TO_SANS[fontFamily]) fontFamily = SERIF_TO_SANS[fontFamily];
+
+  const rtlText = isRTL && !ltr;
 
   return (
     <Text
       style={[
-        { color: theme[themeColor ?? 'text'] },
-        type === 'default' && styles.default,
-        type === 'title' && styles.title,
-        type === 'small' && styles.small,
-        type === 'smallBold' && styles.smallBold,
-        type === 'subtitle' && styles.subtitle,
-        type === 'link' && styles.link,
-        type === 'linkPrimary' && styles.linkPrimary,
-        type === 'code' && styles.code,
+        {
+          color: theme[color ?? themeColor ?? 'text'],
+          fontFamily,
+          fontSize: variant.fontSize,
+          lineHeight: variant.lineHeight,
+          letterSpacing: uppercase ? variant.letterSpacing + 0.5 : variant.letterSpacing,
+        },
+        rtlText && styles.rtl,
+        uppercase && styles.uppercase,
         style,
       ]}
       {...rest}
@@ -31,43 +86,6 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
 }
 
 const styles = StyleSheet.create({
-  small: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 500,
-  },
-  smallBold: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 700,
-  },
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: 500,
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: 600,
-    lineHeight: 52,
-  },
-  subtitle: {
-    fontSize: 32,
-    lineHeight: 44,
-    fontWeight: 600,
-  },
-  link: {
-    lineHeight: 30,
-    fontSize: 14,
-  },
-  linkPrimary: {
-    lineHeight: 30,
-    fontSize: 14,
-    color: '#3c87f7',
-  },
-  code: {
-    fontFamily: Fonts.mono,
-    fontWeight: Platform.select({ android: 700 }) ?? 500,
-    fontSize: 12,
-  },
+  rtl: { writingDirection: 'rtl', textAlign: 'right' },
+  uppercase: { textTransform: 'uppercase' },
 });

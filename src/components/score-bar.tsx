@@ -1,52 +1,62 @@
 /**
- * ScoreBar
- * ========
- *
- * A labelled 0–100 progress bar. Used on Home to show the Khutwa Score and its
- * three sub-scores (Root / Bloom / Heritage).
+ * ScoreBar — one sub-score (Root / Bloom / Heritage) as a slim animated meter.
  */
 
-import { StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
-import { ThemedText } from './themed-text';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { ThemedText } from '@/components/themed-text';
+import { Radii, Spacing, type ThemeColor } from '@/constants/theme';
 import { clamp } from '@/logic/khutwaScore';
+import { useTheme } from '@/hooks/use-theme';
 
-export interface ScoreBarProps {
+export function ScoreBar({
+  label,
+  sublabel,
+  value,
+  tone = 'primary',
+}: {
   label: string;
+  sublabel?: string;
   value: number; // 0–100
-  /** Optional accent colour for the fill (defaults to the theme text colour). */
-  color?: string;
-  /** Bigger text + taller track for the headline Khutwa Score. */
-  emphasis?: boolean;
-}
-
-export function ScoreBar({ label, value, color, emphasis = false }: ScoreBarProps) {
+  tone?: ThemeColor;
+}) {
   const theme = useTheme();
   const pct = clamp(value);
-  const trackHeight = emphasis ? 14 : 8;
+  const w = useSharedValue(0);
+  const noAnim = Platform.OS === 'web' || useReducedMotion();
+
+  useEffect(() => {
+    w.set(noAnim ? pct / 100 : withSpring(pct / 100, { duration: 700, dampingRatio: 1 }));
+  }, [pct, w, noAnim]);
+
+  const fillStyle = useAnimatedStyle(() => ({ width: `${w.get() * 100}%` }));
 
   return (
     <View style={styles.row}>
-      <View style={styles.labelRow}>
-        <ThemedText type={emphasis ? 'subtitle' : 'small'}>{label}</ThemedText>
-        <ThemedText type={emphasis ? 'subtitle' : 'smallBold'}>{Math.round(pct)}</ThemedText>
+      <View style={styles.labels}>
+        <ThemedText type="callout">
+          {label}
+          {sublabel ? (
+            <ThemedText type="small" color="textMuted">
+              {'  '}
+              {sublabel}
+            </ThemedText>
+          ) : null}
+        </ThemedText>
+        <ThemedText type="callout" color="textSecondary" ltr>
+          {Math.round(pct)}
+        </ThemedText>
       </View>
-      <View
-        style={[
-          styles.track,
-          { height: trackHeight, borderRadius: trackHeight / 2, backgroundColor: theme.backgroundElement },
-        ]}>
-        <View
-          style={[
-            styles.fill,
-            {
-              width: `${pct}%`,
-              borderRadius: trackHeight / 2,
-              backgroundColor: color ?? theme.text,
-            },
-          ]}
+      <View style={[styles.track, { backgroundColor: theme.backgroundAlt }]}>
+        <Animated.View
+          style={[styles.fill, fillStyle, { backgroundColor: theme[tone] }]}
         />
       </View>
     </View>
@@ -54,19 +64,8 @@ export function ScoreBar({ label, value, color, emphasis = false }: ScoreBarProp
 }
 
 const styles = StyleSheet.create({
-  row: {
-    alignSelf: 'stretch',
-    gap: Spacing.one,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-  },
-  track: {
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-  },
+  row: { alignSelf: 'stretch', gap: Spacing.one },
+  labels: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  track: { height: 8, borderRadius: Radii.pill, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: Radii.pill },
 });

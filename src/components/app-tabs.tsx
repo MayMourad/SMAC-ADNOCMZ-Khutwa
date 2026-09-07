@@ -2,49 +2,52 @@
  * Bottom tab bar (native)
  * =======================
  *
- * Four tabs, matching the four route files in `src/app/`:
- *   index.tsx   -> Home    (the shared Ghaf tree + Khutwa Score)
- *   walk.tsx    -> Walk     (active tracking: steps, geofence check-ins, bloom)
- *   stories.tsx -> Stories  (log of unlocked location memories)
- *   family.tsx  -> Family   (members + privacy settings)
+ * The platform's real tab bar (`expo-router/unstable-native-tabs`), themed to
+ * the oasis palette. We deliberately do NOT hand-roll a JS tab bar — the native
+ * one brings the correct press behaviour, blur and transitions for free; the
+ * app's character lives in the screens, not the chrome.
  *
- * Uses `expo-router/unstable-native-tabs`, which renders a real UITabBar /
- * BottomNavigationView. Icons are SF Symbols on iOS (`sf`) and Material Symbols
- * on Android (`md`) — no image assets needed. The web bar is a separate file
- * (`app-tabs.web.tsx`) because native tabs don't render on web.
+ * Four triggers, matching the four route files in src/app/. Icons are SF
+ * Symbols on iOS and Material Symbols on Android. Labels are translated by the
+ * per-route screen titles isn't possible here, so the labels stay in the app
+ * language via the i18n table.
  */
 
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useLang } from '@/i18n';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const c = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const { t } = useLang();
 
   return (
     <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
+      backgroundColor={c.surface}
+      tintColor={c.primary}
+      iconColor={{ default: c.textMuted, selected: c.primary }}
+      labelStyle={{ default: { color: c.textMuted }, selected: { color: c.primary } }}
+      indicatorColor={c.backgroundAlt}>
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="tree.fill" md="park" />
+        <NativeTabs.Trigger.Label>{t('nav.home')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'tree', selected: 'tree.fill' }} md="park" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="walk">
-        <NativeTabs.Trigger.Label>Walk</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t('walk.title')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="figure.walk" md="directions_walk" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="stories">
-        <NativeTabs.Trigger.Label>Stories</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="book.fill" md="menu_book" />
+        <NativeTabs.Trigger.Label>{t('stories.title')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'book', selected: 'book.fill' }} md="menu_book" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="family">
-        <NativeTabs.Trigger.Label>Family</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t('family.title')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="person.2.fill" md="groups" />
       </NativeTabs.Trigger>
     </NativeTabs>

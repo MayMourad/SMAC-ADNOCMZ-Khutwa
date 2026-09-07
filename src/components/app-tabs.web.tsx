@@ -2,9 +2,9 @@
  * Bottom tab bar (web)
  * ====================
  *
- * Web build of the same four tabs as `app-tabs.tsx`. Native tabs don't render on
- * web, so this uses the JS-based `expo-router/ui` primitives. Kept intentionally
- * plain — the phone is the real target; web is just for quick layout checks.
+ * Web fallback for `app-tabs.tsx` (native tabs don't render on web). A floating
+ * pill bar in the oasis palette. The phone is the real target — this is for
+ * quick layout checks.
  */
 
 import {
@@ -15,29 +15,31 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
-
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
-
-const TABS = [
-  { name: 'home', href: '/', label: 'Home' },
-  { name: 'walk', href: '/walk', label: 'Walk' },
-  { name: 'stories', href: '/stories', label: 'Stories' },
-  { name: 'family', href: '/family', label: 'Family' },
-] as const;
+import { PressableScale } from './pressable-scale';
+import { Colors, MaxContentWidth, Radii, Shadow, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useLang } from '@/i18n';
 
 export default function AppTabs() {
+  const { t } = useLang();
+  const TABS = [
+    { name: 'home', href: '/', label: t('nav.home') },
+    { name: 'walk', href: '/walk', label: t('walk.title') },
+    { name: 'stories', href: '/stories', label: t('stories.title') },
+    { name: 'family', href: '/family', label: t('family.title') },
+  ] as const;
+
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
-          {TABS.map((t) => (
-            <TabTrigger key={t.name} name={t.name} href={t.href} asChild>
-              <TabButton>{t.label}</TabButton>
+          {TABS.map((tab) => (
+            <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
+              <TabButton>{tab.label}</TabButton>
             </TabTrigger>
           ))}
         </CustomTabList>
@@ -46,62 +48,56 @@ export default function AppTabs() {
   );
 }
 
-export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+  const scheme = useColorScheme();
+  const c = Colors[scheme === 'dark' ? 'dark' : 'light'];
   return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
-        style={styles.tabButtonView}>
-        <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
-          {children}
+    <PressableScale {...(props as object)} haptic={false} activeScale={0.95}>
+      <View
+        style={[
+          styles.tab,
+          isFocused && { backgroundColor: c.backgroundAlt },
+        ]}>
+        <ThemedText type="callout" style={{ color: isFocused ? c.primary : c.textMuted }}>
+          {children as React.ReactNode}
         </ThemedText>
-      </ThemedView>
-    </Pressable>
+      </View>
+    </PressableScale>
   );
 }
 
-export function CustomTabList(props: TabListProps) {
-  useColorScheme(); // re-render on scheme change
+function CustomTabList(props: TabListProps) {
+  const scheme = useColorScheme();
+  const c = Colors[scheme === 'dark' ? 'dark' : 'light'];
   return (
-    <View {...props} style={styles.tabListContainer}>
-      <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          Khutwa
-        </ThemedText>
+    <View style={styles.wrap} pointerEvents="box-none">
+      <View style={[styles.bar, { backgroundColor: c.surface, borderColor: c.border }]}>
         {props.children}
-      </ThemedView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabListContainer: {
+  wrap: {
     position: 'absolute',
-    width: '100%',
-    padding: Spacing.three,
-    justifyContent: 'center',
+    bottom: Spacing.four,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    flexDirection: 'row',
   },
-  innerContainer: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-    borderRadius: Spacing.five,
+  bar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    flexGrow: 1,
-    gap: Spacing.two,
+    gap: Spacing.one,
+    padding: Spacing.one,
+    borderRadius: Radii.pill,
+    borderWidth: 1,
     maxWidth: MaxContentWidth,
+    ...Shadow.lg,
   },
-  brandText: {
-    marginRight: 'auto',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  tabButtonView: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
+  tab: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Radii.pill,
   },
 });

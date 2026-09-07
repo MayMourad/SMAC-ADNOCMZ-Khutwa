@@ -1,19 +1,17 @@
 /**
- * RouteErrorBoundary
- * ==================
- *
- * Re-exported from src/app/_layout.tsx as `ErrorBoundary`. expo-router renders
- * this instead of a blank screen when a route throws during render. Gives the
- * user (and a judge on demo day) a readable message and a retry button rather
- * than a white screen.
+ * RouteErrorBoundary — re-exported from src/app/_layout.tsx as `ErrorBoundary`.
+ * expo-router shows this instead of a blank screen when a route throws.
  */
 
 import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PillButton } from '@/components/pill-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Radii, Spacing } from '@/constants/theme';
+import { useLang } from '@/i18n';
+import { useTheme } from '@/hooks/use-theme';
 
 export function RouteErrorBoundary({
   error,
@@ -22,20 +20,21 @@ export function RouteErrorBoundary({
   error: Error;
   retry: () => Promise<void>;
 }) {
+  const theme = useTheme();
+  const { t } = useLang();
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.inner}>
-        <ThemedText type="subtitle">Something went wrong</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          The app hit an unexpected error. You can try again — if it keeps
-          happening, restart the app.
+        <ThemedText type="title">{t('common.somethingWrong')}</ThemedText>
+        <ThemedText type="body" color="textSecondary">
+          {t('common.errorBody')}
         </ThemedText>
-        <ScrollView style={styles.box}>
-          <ThemedText type="code">{error?.message ?? 'Unknown error'}</ThemedText>
+        <ScrollView style={[styles.box, { backgroundColor: theme.backgroundAlt }]}>
+          <ThemedText type="mono" color="textMuted">
+            {error?.message ?? 'Unknown error'}
+          </ThemedText>
         </ScrollView>
-        <ThemedText type="link" onPress={() => retry()}>
-          Try again
-        </ThemedText>
+        <PillButton label={t('common.retry')} onPress={() => retry()} variant="outline" />
       </SafeAreaView>
     </ThemedView>
   );
@@ -43,15 +42,6 @@ export function RouteErrorBoundary({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  box: {
-    maxHeight: 200,
-    padding: Spacing.three,
-    borderRadius: Spacing.two,
-  },
+  inner: { flex: 1, justifyContent: 'center', padding: Spacing.four, gap: Spacing.three },
+  box: { maxHeight: 180, padding: Spacing.three, borderRadius: Radii.md },
 });
