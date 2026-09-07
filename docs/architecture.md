@@ -32,12 +32,12 @@ means we can swap an implementation (e.g. pedometer → HealthKit) in one file.
 
 | Folder | What's in it |
 |---|---|
-| `app/` | expo-router route files. Each is a 1-line re-export of a screen. `_layout.tsx` sets the theme + renders the tab bar. |
-| `screens/` | The actual screen components (`home-screen.tsx`, `walk-screen.tsx`, `stories-screen.tsx`, `family-screen.tsx`). |
-| `components/` | Reusable UI: `ghaf-tree`, `score-bar`, `app-tabs` (+ `.web`), plus the starter template's themed primitives. |
+| `app/` | expo-router route files. Each is a 1-line re-export of a screen. `_layout.tsx` sets the theme, keeps `<AppTabs/>` mounted, and paints `<AuthOverlay/>` on top; it also exports `ErrorBoundary`. |
+| `screens/` | The screen components: `home` / `walk` / `stories` / `family`, plus `sign-in` and `family-setup` (shown by the auth overlay). |
+| `components/` | Reusable UI: `ghaf-tree`, `score-bar`, `app-tabs` (+ `.web`), `auth-gate` (the `AuthOverlay`), `route-error-boundary`, plus the starter template's themed primitives. |
 | `hooks/` | Data hooks that pick **live Firestore** or **mock data** automatically based on `isFirebaseConfigured`. |
 | `services/` | The only files that touch Firebase / device APIs. See below. |
-| `logic/` | Pure functions, no I/O. `khutwaScore.ts` — the whole scoring model. |
+| `logic/` | Pure functions, no I/O, unit-tested. `khutwaScore.ts` (the scoring model) and `aggregateWeek.ts` (raw activity → score inputs over a 7-day window). |
 | `data/` | Static content: `locations.ts` (curated sites), `stories.ts` (pre-generated narration cache), `mock.ts` (dev fallback). |
 | `types/` | `models.ts` — the shape of every Firestore document. Single source of truth. |
 | `config/` | `env.ts` — reads secrets from `app.json > expo.extra`, never hard-coded. |
@@ -46,7 +46,8 @@ means we can swap an implementation (e.g. pedometer → HealthKit) in one file.
 
 | Service | Wraps | Key functions |
 |---|---|---|
-| `firebase.ts` | `firebase/app`, `firebase/auth`, `firebase/firestore` | `createFamily`, `findFamilyForUser`, `subscribeToTreeState`, `writeTreeState`, `setBlooming`, `listMemories`, `unlockMemory`, `syncDailySteps` |
+| `firebase.ts` | `firebase/app`, `firebase/auth`, `firebase/firestore` (lazy init) | auth: `signInAnon` / `signInWithEmail` / `signUpWithEmail` / `signOutUser`; family: `bootstrapFamily`, `joinFamilyByCode`, `findFamilyForUser`, `setMemberShareLocation`; tree: `subscribeToTreeState`, `writeTreeState`, `initTreeState`, `setBlooming`; `getWeekStats` / `bumpWeekStat`; `listMemories`, `unlockMemory`, `syncDailySteps` |
+| `scoreSync.ts` | *(orchestration only)* | `recomputeTree(familyId)` — read week → `aggregateWeek` → `computeKhutwaScore` → `writeTreeState` |
 | `location.ts` | `expo-location`, `expo-task-manager` | `requestPermissions`, `startGeofencing(regions)`, `stopGeofencing`, `onEnterRegion(cb)`, `distanceMeters`, `areTogether` |
 | `steps.ts` | `expo-sensors` Pedometer | `readTodaySteps`, `watchSteps`, `manualSteps` |
 | `speech.ts` | `expo-speech` | `narrate(text)`, `stopNarration` |
@@ -73,11 +74,25 @@ open. `startGeofencing()` picks the right path automatically.
 5. The shipped app reads only that cache and speaks it with device TTS.
    **No LLM call happens at runtime.**
 
-## What's still stubbed (see commit plan / TODOs in code)
+## Done
 
-- Real sign-in screen (hooks already react to `onAuthStateChanged`).
-- Firestore seed + security rules deploy (`scripts/seed-firestore.ts`, `docs/firestore.rules`).
-- `data/stories.ts` filled with reviewed narration for all curated sites.
-- Persisting the Family screen's `shareLocation` toggle to Firestore.
-- Weekly metric aggregation feeding `computeKhutwaScore` (a Cloud Function or an
-  on-device roll-up).
+- Firebase project live (`smac-adnocmz-khutwa`), rules deployed, 8 memories seeded.
+- Sign-in (email + anonymous), family create / join by invite code.
+- Family `shareLocation` toggle persists to Firestore.
+- Weekly aggregation (`aggregateWeek.ts`) feeds `computeKhutwaScore`; the tree
+  recomputes from real activity (`scoreSync.recomputeTree`), called on Home open
+  and after unlocks / "together" check-ins / manual step logs.
+- 8 AI-drafted narrations in `data/stories.ts` + Firestore.
+
+## What's still stubbed / to do
+
+- **Story review + Arabic** — `data/stories.ts` narrations are AI-drafted, not
+  team-reviewed; `ar-AE` not written.
+- **`generate-stories.ts` `callModel()`** — HTTP LLM call is a stub (wire a
+  provider + key only to regenerate later).
+- **`recomputeTree` runs client-side** — fine for the MVP; a Cloud Function
+  would own it in production (and lock `treeState` writes to `if false`).
+- **Android historical steps** — `steps.ts` returns null on Android; use the
+  manual entry field or wire Health Connect.
+- **On-device Gemma / real-time voice / procedural tree** — deliberately out of
+  scope (see `docs/idea-brief.md` "cut from MVP").

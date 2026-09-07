@@ -46,50 +46,78 @@ See `/docs/idea-brief.md` for the full refined idea brief, scope rationale, and 
 
 ## AI Usage Disclosure
 
-Per competition rules, all AI usage during development is logged with prompts in `/docs/ai-prompt-log.md`. This includes:
-- Prompts used to generate the in-app location stories (a core app feature, not a dev shortcut)
-- Prompts used to get development/coding assistance from AI tools
+Per competition rules, every use of AI during development is logged with the
+prompts in [`docs/ai-prompt-log.md`](docs/ai-prompt-log.md). This covers:
 
-No AI tool was used to generate the application as a whole; all code is written and understood by the team.
+- **Story generation** — the prompt template and per-location prompts used to
+  pre-generate the in-app narrations (a core app feature). The generated text is
+  team-reviewed before shipping.
+- **Development assistance** — Claude (via Claude Code) was used as a coding
+  assistant across the build: scaffolding, the Firebase/service layer, the
+  scoring logic, and setup. Each session is logged with what was asked and how
+  the output was used.
 
-## Getting Started
+The team has reviewed the codebase and can explain every part of it in the Q&A.
+
+## Run it (development)
 
 ```bash
-# Clone the repo
-git clone <repo-url>
-cd khutwa
-
-# Install dependencies
+git clone https://github.com/MayMourad/SMAC-ADNOCMZ-Khutwa.git
+cd SMAC-ADNOCMZ-Khutwa
 npm install
-
-# Start the Expo dev server
-npx expo start
+npx expo start          # then scan the QR with Expo Go (iOS/Android)
 ```
 
-Requires the Expo Go app (for quick device testing) or an EAS development build. See `/docs/setup.md` for full environment setup instructions.
+Firebase is already configured in `app.json`; the app connects to the live
+`smac-adnocmz-khutwa` project on first launch (you'll get the sign-in screen).
+In Expo Go, geofencing runs in the foreground only — a full build adds
+background geofencing. Full environment notes: [`docs/build-and-run.md`](docs/build-and-run.md).
+
+```bash
+npm run typecheck       # tsc, no emit
+npm test                # jest — Khutwa Score + weekly aggregation
+```
+
+## Build an installable app
+
+```bash
+npm i -g eas-cli
+eas login               # free Expo account
+eas build -p android --profile preview     # -> installable .apk link
+```
+
+`eas.json` defines `development` / `preview` / `production` profiles. Android
+`preview` produces a sideloadable APK (no store, no fee). iOS requires an Apple
+Developer account or a Mac for free provisioning — see
+[`docs/build-and-run.md`](docs/build-and-run.md).
 
 ## Project Structure
 
 ```
 src/
   app/         expo-router routes (thin re-exports of screens) + _layout
-  screens/     Home · Walk · Stories · Family
-  components/  GhafTree, ScoreBar, AppTabs, themed primitives
+  screens/     Home · Walk · Stories · Family · SignIn · FamilySetup
+  components/  GhafTree, ScoreBar, AppTabs, AuthOverlay, ErrorBoundary, themed primitives
   hooks/       use-auth / use-family / use-tree-state / use-memories
                (auto-switch between live Firestore and mock data)
-  services/    firebase · location · steps · speech · llm  (only these touch I/O)
-  logic/       khutwaScore.ts — pure scoring functions
+  services/    firebase · location · steps · speech · llm · scoreSync  (only these touch I/O)
+  logic/       khutwaScore.ts + aggregateWeek.ts — pure, unit-tested
   data/        locations.ts · stories.ts (pre-generated cache) · mock.ts
   types/       models.ts — shape of every Firestore document
-  config/      env.ts — reads secrets from app.json > expo.extra
-assets/        images, icons
-docs/          architecture · data-model · khutwa-score · firestore.rules ·
-               ai-prompt-log · idea-brief · locations · setup
+  config/      env.ts — reads config from app.json > expo.extra
+docs/          architecture · data-model · khutwa-score · firebase-setup ·
+               build-and-run · firestore.rules · ai-prompt-log · idea-brief
 scripts/       dev-only: generate-stories.ts · seed-firestore.ts
 ```
 
-See `docs/architecture.md` for how the pieces fit together.
+See [`docs/architecture.md`](docs/architecture.md) for how the pieces fit together.
 
 ## Status
 
-🚧 In active development for SMAC 2026 — Submission: Sept 8, 2026 · Demo Day: Sept 16, 2026
+🚧 Active development for SMAC 2026 — Submission: Sept 8, 2026 · Demo Day: Sept 16, 2026
+
+Working: Firebase auth (email + anonymous), family create/join by invite code,
+shared tree + Khutwa Score from real weekly activity, 8 seeded heritage
+locations with narrations, geofence-triggered TTS, "together" bloom, privacy
+controls. See [`docs/architecture.md`](docs/architecture.md) for what's still
+stubbed.
