@@ -1,26 +1,29 @@
 /**
- * StoriesScreen  (tab: Stories)
- * =============================
+ * StoriesScreen (tab: Stories)
+ * ============================
  *
- * The log of location memories. Unlocked ones show their narration text and a
- * Play button (device text-to-speech). Locked ones show where to go to unlock.
- *
- * Reads from `useMemories()` — mock list until Firestore is seeded, then live.
+ * The log of location memories. Unlocked ones show their narration (serif) and
+ * a play button (device TTS). Locked ones point you where to walk.
  */
 
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
+import { FadeIn } from '@/components/fade-in';
+import { BookLock, Play, Square } from 'lucide-react-native';
 
+import { Card } from '@/components/card';
+import { PressableScale } from '@/components/pressable-scale';
+import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Radii, Spacing } from '@/constants/theme';
+import { storyLang, useLang } from '@/i18n';
 import { useMemories } from '@/hooks/use-memories';
 import { useTheme } from '@/hooks/use-theme';
 import { narrate, stopNarration } from '@/services/speech';
 
 export function StoriesScreen() {
   const theme = useTheme();
+  const { t, lang } = useLang();
   const memories = useMemories();
   const [playingId, setPlayingId] = useState<string | null>(null);
 
@@ -31,89 +34,91 @@ export function StoriesScreen() {
       return;
     }
     setPlayingId(id);
-    narrate(text, { onDone: () => setPlayingId(null) });
+    narrate(text, { language: storyLang(lang), onDone: () => setPlayingId(null) });
   };
 
   const unlockedCount = memories.filter((m) => m.unlockedAt).length;
 
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <SafeAreaView style={styles.inner}>
-          <ThemedText type="subtitle">Stories</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {unlockedCount} of {memories.length} family places unlocked
-          </ThemedText>
+    <Screen wash="accent">
+      <FadeIn style={{ gap: 4 }}>
+        <ThemedText type="title">{t('stories.title')}</ThemedText>
+        <ThemedText type="callout" color="textMuted">
+          {t('stories.progress', { n: unlockedCount, total: memories.length })}
+        </ThemedText>
+      </FadeIn>
 
-          {memories.map((m) => {
-            const unlocked = !!m.unlockedAt;
-            return (
-              <ThemedView key={m.id} type="backgroundElement" style={styles.card}>
-                <View style={styles.cardHead}>
-                  <ThemedText type="smallBold">{m.label}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {unlocked ? 'Unlocked' : 'Locked'}
+      {memories.map((m, i) => {
+        const unlocked = !!m.unlockedAt;
+        const playing = playingId === m.id;
+        return (
+          <FadeIn key={m.id} delay={60 + i * 50}>
+            <Card variant={unlocked ? 'elevated' : 'flat'} style={styles.card}>
+              <View style={styles.head}>
+                <ThemedText type="heading">{m.label}</ThemedText>
+                <View
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: unlocked ? theme.primary : theme.backgroundAlt,
+                    },
+                  ]}>
+                  <ThemedText
+                    type="label"
+                    uppercase
+                    style={{ color: unlocked ? theme.onPrimary : theme.textMuted }}>
+                    {unlocked ? t('stories.unlocked') : t('stories.locked')}
                   </ThemedText>
                 </View>
+              </View>
 
-                {unlocked ? (
-                  <>
-                    <ThemedText type="small">{m.storyText || m.heritageAngle}</ThemedText>
-                    <Pressable
-                      onPress={() => play(m.id, m.storyText || m.heritageAngle)}
-                      style={({ pressed }) => [
-                        styles.button,
-                        { backgroundColor: theme.text, opacity: pressed ? 0.7 : 1 },
-                      ]}>
-                      <ThemedText type="smallBold" style={{ color: theme.background }}>
-                        {playingId === m.id ? 'Stop' : 'Play story'}
-                      </ThemedText>
-                    </Pressable>
-                  </>
-                ) : (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Walk near {m.label} together to unlock this story.
+              {unlocked ? (
+                <>
+                  <ThemedText type="bodySerif" color="textSecondary">
+                    {m.storyText || m.heritageAngle}
                   </ThemedText>
-                )}
-              </ThemedView>
-            );
-          })}
-        </SafeAreaView>
-      </ScrollView>
-    </ThemedView>
+                  <PressableScale
+                    onPress={() => play(m.id, m.storyText || m.heritageAngle)}
+                    style={[styles.play, { backgroundColor: theme.text }]}>
+                    {playing ? (
+                      <Square size={15} color={theme.background} fill={theme.background} />
+                    ) : (
+                      <Play size={15} color={theme.background} fill={theme.background} />
+                    )}
+                    <ThemedText type="callout" style={{ color: theme.background }}>
+                      {playing ? t('stories.stop') : t('stories.play')}
+                    </ThemedText>
+                  </PressableScale>
+                </>
+              ) : (
+                <View style={styles.lockedRow}>
+                  <BookLock size={16} color={theme.textMuted} />
+                  <ThemedText type="small" color="textMuted" style={{ flex: 1 }}>
+                    {t('stories.lockedHint', { place: m.label })}
+                  </ThemedText>
+                </View>
+              )}
+            </Card>
+          </FadeIn>
+        );
+      })}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: {
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.five,
-  },
-  inner: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    gap: Spacing.three,
-    paddingTop: Spacing.four,
-  },
-  card: {
-    alignSelf: 'stretch',
-    padding: Spacing.four,
-    borderRadius: Spacing.four,
-    gap: Spacing.two,
-  },
-  cardHead: {
+  card: { alignSelf: 'stretch', gap: Spacing.two },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  chip: { paddingHorizontal: Spacing.two, paddingVertical: 4, borderRadius: Radii.pill },
+  play: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-  },
-  button: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    alignSelf: 'flex-start',
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    borderRadius: Radii.pill,
     marginTop: Spacing.one,
   },
+  lockedRow: { flexDirection: 'row', gap: Spacing.two, alignItems: 'center' },
 });

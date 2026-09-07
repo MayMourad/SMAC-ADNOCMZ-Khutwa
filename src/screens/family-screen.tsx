@@ -1,29 +1,33 @@
 /**
- * FamilyScreen  (tab: Family)
- * ===========================
+ * FamilyScreen (tab: Family)
+ * ==========================
  *
- * Members of the family group, the invite code for adding the 2nd/3rd member,
- * and the privacy controls that the brief's Privacy & Safety section calls for:
- *   - each member has a "share my location with the family" switch
- *   - a guardian can turn location sharing off for a younger member
- *   - a short, plain explanation of what stays on the device
+ * Members, the invite code, the privacy controls the brief calls for, the
+ * language toggle, and sign out.
  */
 
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Switch, View } from 'react-native';
+import { FadeIn } from '@/components/fade-in';
 
+import { Card } from '@/components/card';
+import { LanguageToggle } from '@/components/language-toggle';
+import { PressableScale } from '@/components/pressable-scale';
+import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { isFirebaseConfigured } from '@/config/env';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Fonts, Radii, Spacing } from '@/constants/theme';
+import { useLang } from '@/i18n';
 import { useAuth } from '@/hooks/use-auth';
 import { useFamily } from '@/hooks/use-family';
 import { useTheme } from '@/hooks/use-theme';
 import { setMemberShareLocation, signOutUser } from '@/services/firebase';
 
+const AVATAR_TONES = ['primary', 'accent', 'sky'] as const;
+
 export function FamilyScreen() {
   const theme = useTheme();
+  const { t } = useLang();
   const { user } = useAuth();
   const { family } = useFamily(user?.uid ?? null);
   const [pendingUid, setPendingUid] = useState<string | null>(null);
@@ -31,12 +35,8 @@ export function FamilyScreen() {
   const me = family?.members.find((m) => m.uid === user?.uid);
   const iAmGuardian = me?.role === 'guardian';
 
-  const setShareLocation = async (uid: string, value: boolean) => {
-    if (!family) return;
-    if (!isFirebaseConfigured) {
-      // Mock mode: no backend to write to; the switch is visual only.
-      return;
-    }
+  const setShare = async (uid: string, value: boolean) => {
+    if (!family || !isFirebaseConfigured) return;
     setPendingUid(uid);
     try {
       await setMemberShareLocation(family.id, uid, value);
@@ -46,97 +46,107 @@ export function FamilyScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <SafeAreaView style={styles.inner}>
-          <ThemedText type="subtitle">Family</ThemedText>
+    <Screen wash="primary">
+      <FadeIn>
+        <ThemedText type="title">{t('family.title')}</ThemedText>
+      </FadeIn>
 
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">Invite code</ThemedText>
-            <ThemedText type="title">{family?.inviteCode ?? '—'}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Share this with a family member so they can join your group.
-            </ThemedText>
-          </ThemedView>
+      <FadeIn delay={80}>
+        <Card style={styles.card}>
+          <ThemedText type="label" color="textMuted" uppercase>
+            {t('family.inviteCode')}
+          </ThemedText>
+          <ThemedText
+            ltr
+            style={{ fontFamily: Fonts.serifSemiBold, fontSize: 32, lineHeight: 38, color: theme.text, letterSpacing: 2 }}>
+            {family?.inviteCode ?? '—'}
+          </ThemedText>
+          <ThemedText type="small" color="textMuted">
+            {t('family.inviteHint')}
+          </ThemedText>
+        </Card>
+      </FadeIn>
 
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">Members</ThemedText>
-            {family?.members.map((m) => {
-              const canToggle = m.uid === user?.uid || (iAmGuardian && m.role === 'member');
-              return (
-                <View key={m.uid} style={styles.memberRow}>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText type="small">
-                      {m.displayName}
-                      {m.uid === user?.uid ? ' (you)' : ''}
-                    </ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      {m.role} · location {m.shareLocation ? 'shared' : 'private'}
-                    </ThemedText>
-                  </View>
-                  <Switch
-                    value={m.shareLocation}
-                    disabled={!canToggle || pendingUid === m.uid}
-                    onValueChange={(v) => setShareLocation(m.uid, v)}
-                  />
+      <FadeIn delay={150}>
+        <Card style={styles.card}>
+          <ThemedText type="label" color="textMuted" uppercase>
+            {t('family.members')}
+          </ThemedText>
+          {family?.members.map((m, i) => {
+            const canToggle = m.uid === user?.uid || (iAmGuardian && m.role === 'member');
+            const tone = AVATAR_TONES[i % AVATAR_TONES.length];
+            return (
+              <View key={m.uid} style={styles.memberRow}>
+                <View style={[styles.avatar, { backgroundColor: theme[tone] }]}>
+                  <ThemedText type="subtitle" style={{ color: theme.onPrimary }} ltr>
+                    {m.displayName.trim().charAt(0).toUpperCase() || '?'}
+                  </ThemedText>
                 </View>
-              );
-            })}
-          </ThemedView>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="subtitle">
+                    {m.displayName}
+                    {m.uid === user?.uid ? ` (${t('family.you')})` : ''}
+                  </ThemedText>
+                  <ThemedText type="small" color="textMuted">
+                    {t(`family.role.${m.role}`)} ·{' '}
+                    {m.shareLocation ? t('family.location.shared') : t('family.location.private')}
+                  </ThemedText>
+                </View>
+                <Switch
+                  value={m.shareLocation}
+                  disabled={!canToggle || pendingUid === m.uid}
+                  onValueChange={(v) => setShare(m.uid, v)}
+                  trackColor={{ true: theme.primary }}
+                />
+              </View>
+            );
+          })}
+        </Card>
+      </FadeIn>
 
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">Your privacy</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Location is processed on your device. It is used only to unlock nearby
-              family stories and to bloom the tree when you&apos;re together. It is not
-              shared outside your family group and not sent to any third party. AI
-              stories are written ahead of time from approved content — your live
-              location is never sent to an AI service.
-            </ThemedText>
-          </ThemedView>
+      <FadeIn delay={220}>
+        <Card style={styles.card}>
+          <ThemedText type="label" color="textMuted" uppercase>
+            {t('family.language')}
+          </ThemedText>
+          <LanguageToggle />
+        </Card>
+      </FadeIn>
 
-          {isFirebaseConfigured && (
-            <Pressable
-              onPress={() => signOutUser()}
-              style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.6 }]}>
-              <ThemedText type="link" themeColor="textSecondary">
-                Sign out
-              </ThemedText>
-            </Pressable>
-          )}
-        </SafeAreaView>
-      </ScrollView>
-    </ThemedView>
+      <FadeIn delay={290}>
+        <Card variant="flat" style={styles.card}>
+          <ThemedText type="heading">{t('family.privacy')}</ThemedText>
+          <ThemedText type="body" color="textSecondary">
+            {t('family.privacyBody')}
+          </ThemedText>
+        </Card>
+      </FadeIn>
+
+      {isFirebaseConfigured && (
+        <PressableScale haptic={false} onPress={() => signOutUser()} style={styles.signOut}>
+          <ThemedText type="callout" color="textMuted">
+            {t('common.signOut')}
+          </ThemedText>
+        </PressableScale>
+      )}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: {
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.five,
-  },
-  inner: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    gap: Spacing.three,
-    paddingTop: Spacing.four,
-  },
-  card: {
-    alignSelf: 'stretch',
-    padding: Spacing.four,
-    borderRadius: Spacing.four,
-    gap: Spacing.two,
-  },
+  card: { alignSelf: 'stretch', gap: Spacing.two },
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
     paddingVertical: Spacing.two,
   },
-  signOut: {
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.pill,
     alignItems: 'center',
-    paddingVertical: Spacing.three,
+    justifyContent: 'center',
   },
+  signOut: { alignSelf: 'center', paddingVertical: Spacing.three },
 });

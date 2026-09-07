@@ -1,27 +1,26 @@
 /**
- * WalkScreen  (tab: Walk)
- * =======================
+ * WalkScreen (tab: Walk)
+ * ======================
  *
- * Active tracking during a walk:
- *   - live step count for this device (foreground pedometer)
- *   - geofencing over the curated locations; entering one narrates its story
- *     and unlocks the memory
- *   - a "We're together" check-in that blooms the shared tree
- *   - a manual step entry so the demo works even where the pedometer can't read
- *
- * This screen wires the services together but keeps the logic thin and readable
- * so either teammate can walk a judge through it.
+ * Active tracking: live step count, geofencing over the curated locations
+ * (entering one narrates its story + unlocks it), a "we're together" check-in
+ * that blooms the shared tree, and a manual step entry for testing. Wires the
+ * services together; the logic stays thin so either teammate can walk a judge
+ * through it.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, TextInput, View } from 'react-native';
+import { FadeIn } from '@/components/fade-in';
 
+import { Card } from '@/components/card';
+import { PillButton } from '@/components/pill-button';
+import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { isFirebaseConfigured } from '@/config/env';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Fonts, Radii, Spacing } from '@/constants/theme';
 import { CURATED_LOCATIONS, getLocation } from '@/data/locations';
+import { storyLang, useLang } from '@/i18n';
 import { useAuth } from '@/hooks/use-auth';
 import { useFamily } from '@/hooks/use-family';
 import { useTheme } from '@/hooks/use-theme';
@@ -47,33 +46,36 @@ const REGIONS: MemoryRegion[] = CURATED_LOCATIONS.map((l) => ({
 
 export function WalkScreen() {
   const theme = useTheme();
+  const { t, lang } = useLang();
   const { user } = useAuth();
   const { family } = useFamily(user?.uid ?? null);
   const { tree, bloom } = useTreeState(family?.id ?? null);
 
   const [walking, setWalking] = useState(false);
   const [liveSteps, setLiveSteps] = useState(0);
-  const [status, setStatus] = useState('Ready.');
+  const [status, setStatus] = useState(t('walk.ready'));
   const [manual, setManual] = useState('');
   const stopWatchRef = useRef<null | (() => void)>(null);
 
-  // --- geofence enter -> narrate + unlock -----------------------------------
   useEffect(() => {
     if (!walking) return;
     const unsub = onEnterRegion(async (locationId) => {
       const place = getLocation(locationId);
       if (!place) return;
-      setStatus(`You've reached ${place.label}.`);
+      setStatus(t('walk.status.reached', { place: place.label }));
 
       const story = await getStory(locationId, {
-        familyName: family ? `the ${family.members[0]?.displayName ?? ''} family` : 'the family',
+        familyName: family?.members[0]?.displayName
+          ? `the ${family.members[0].displayName} family`
+          : 'the family',
         presentMembers: family?.members.map((m) => m.displayName) ?? [],
-        language: 'en-AE',
+        language: storyLang(lang),
       });
-      narrate(story.text, { onDone: () => setStatus('Story finished.') });
+      narrate(story.text, {
+        language: storyLang(lang),
+        onDone: () => setStatus(t('walk.status.storyFinished')),
+      });
 
-      // First device to arrive unlocks it for the whole family, then the
-      // score is recomputed so the tree reflects the new memory.
       if (family && user) {
         const svc = await import('@/services/firebase').catch(() => null);
         await svc?.unlockMemory(locationId, user.uid).catch(() => {});
@@ -81,25 +83,20 @@ export function WalkScreen() {
       }
     });
     return unsub;
-  }, [walking, family, user]);
+  }, [walking, family, user, t, lang]);
 
-  // --- start / stop a walk -------------------------------------------------
   const startWalk = useCallback(async () => {
-    setStatus('Asking for location permission…');
+    setStatus(t('walk.status.askingPermission'));
     const perm = await requestPermissions({ background: true });
     if (!perm.foreground) {
-      setStatus('Location permission denied — geofencing is off.');
+      setStatus(t('walk.status.permissionDenied'));
     } else {
       await startGeofencing(REGIONS);
-      setStatus(
-        perm.background
-          ? 'Walk started. Geofencing active in the background.'
-          : 'Walk started. Geofencing active while the app is open.',
-      );
+      setStatus(perm.background ? t('walk.status.startedBg') : t('walk.status.startedFg'));
     }
     stopWatchRef.current = watchSteps(setLiveSteps);
     setWalking(true);
-  }, []);
+  }, [t]);
 
   const endWalk = useCallback(async () => {
     stopWatchRef.current?.();
@@ -107,24 +104,22 @@ export function WalkScreen() {
     await stopGeofencing();
     stopNarration();
     setWalking(false);
-    setStatus('Walk ended.');
-  }, []);
+    setStatus(t('walk.status.ended'));
+  }, [t]);
 
   useEffect(() => () => void endWalk(), [endWalk]);
 
-  // --- "we're together" check-in -> bloom + count the moment ------------
   const toggleTogether = useCallback(async () => {
     const turningOn = !tree?.isBlooming;
     bloom(turningOn);
-    setStatus(turningOn ? 'The tree is blooming 🌸' : 'Bloom cleared.');
+    setStatus(turningOn ? t('walk.status.blooming') : t('walk.status.bloomCleared'));
     if (turningOn && isFirebaseConfigured && family) {
       const svc = await import('@/services/firebase').catch(() => null);
       await svc?.bumpWeekStat(family.id, 'togetherMoments').catch(() => {});
       await recomputeTree(family.id).catch(() => {});
     }
-  }, [tree?.isBlooming, bloom, family]);
+  }, [tree?.isBlooming, bloom, family, t]);
 
-  // --- manual step entry (testing / demo) --------------------------------
   const submitManual = useCallback(async () => {
     const n = parseInt(manual, 10);
     if (!Number.isFinite(n) || n <= 0 || !family || !user) return;
@@ -132,122 +127,86 @@ export function WalkScreen() {
     const svc = await import('@/services/firebase').catch(() => null);
     await svc?.syncDailySteps(family.id, entry).catch(() => {});
     await recomputeTree(family.id).catch(() => {});
-    setStatus(`Logged ${n} steps for ${user.displayName}.`);
+    setStatus(t('walk.status.logged', { n, name: user.displayName }));
     setManual('');
-  }, [manual, family, user]);
+  }, [manual, family, user, t]);
 
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <SafeAreaView style={styles.inner}>
-          <ThemedText type="subtitle">Walk</ThemedText>
+    <Screen wash="primary">
+      <FadeIn>
+        <ThemedText type="title">{t('walk.title')}</ThemedText>
+      </FadeIn>
 
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">Steps this walk</ThemedText>
-            <ThemedText type="title">{liveSteps}</ThemedText>
-            <Pressable
-              onPress={walking ? endWalk : startWalk}
-              style={({ pressed }) => [
-                styles.button,
-                { backgroundColor: theme.text, opacity: pressed ? 0.7 : 1 },
-              ]}>
-              <ThemedText type="smallBold" style={{ color: theme.background }}>
-                {walking ? 'End walk' : 'Start walk'}
-              </ThemedText>
-            </Pressable>
-            <ThemedText type="small" themeColor="textSecondary">
-              {status}
-            </ThemedText>
-          </ThemedView>
+      <FadeIn delay={80}>
+        <Card style={styles.card}>
+          <ThemedText type="label" color="textMuted" uppercase>
+            {t('walk.stepsThisWalk')}
+          </ThemedText>
+          <ThemedText style={{ fontFamily: Fonts.serifSemiBold, fontSize: 52, lineHeight: 58, color: theme.text }} ltr>
+            {liveSteps}
+          </ThemedText>
+          <PillButton
+            full
+            label={walking ? t('walk.end') : t('walk.start')}
+            variant={walking ? 'outline' : 'primary'}
+            onPress={walking ? endWalk : startWalk}
+          />
+          <ThemedText type="small" color="textMuted">
+            {status}
+          </ThemedText>
+        </Card>
+      </FadeIn>
 
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">Together</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              When you&apos;re walking as a family, check in together to make the tree bloom.
-            </ThemedText>
-            <Pressable
-              onPress={toggleTogether}
-              style={({ pressed }) => [
-                styles.button,
-                { backgroundColor: theme.backgroundSelected, opacity: pressed ? 0.7 : 1 },
-              ]}>
-              <ThemedText type="smallBold">
-                {tree?.isBlooming ? "We're done" : "We're together"}
-              </ThemedText>
-            </Pressable>
-          </ThemedView>
+      <FadeIn delay={160}>
+        <Card style={styles.card}>
+          <ThemedText type="heading">{t('walk.together')}</ThemedText>
+          <ThemedText type="body" color="textSecondary">
+            {t('walk.togetherHint')}
+          </ThemedText>
+          <PillButton
+            full
+            variant={tree?.isBlooming ? 'outline' : 'accent'}
+            label={tree?.isBlooming ? t('walk.weAreDone') : t('walk.weAreTogether')}
+            onPress={toggleTogether}
+          />
+        </Card>
+      </FadeIn>
 
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">Log steps manually</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              For testing where the pedometer can&apos;t read history (e.g. Android).
-            </ThemedText>
-            <View style={styles.manualRow}>
-              <TextInput
-                value={manual}
-                onChangeText={setManual}
-                keyboardType="number-pad"
-                placeholder="e.g. 2500"
-                placeholderTextColor={theme.textSecondary}
-                style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-              />
-              <Pressable
-                onPress={submitManual}
-                style={({ pressed }) => [
-                  styles.button,
-                  { backgroundColor: theme.text, opacity: pressed ? 0.7 : 1 },
-                ]}>
-                <ThemedText type="smallBold" style={{ color: theme.background }}>
-                  Log
-                </ThemedText>
-              </Pressable>
-            </View>
-          </ThemedView>
-        </SafeAreaView>
-      </ScrollView>
-    </ThemedView>
+      <FadeIn delay={240}>
+        <Card variant="flat" style={styles.card}>
+          <ThemedText type="heading">{t('walk.logManual')}</ThemedText>
+          <ThemedText type="small" color="textMuted">
+            {t('walk.logManualHint')}
+          </ThemedText>
+          <View style={styles.manualRow}>
+            <TextInput
+              value={manual}
+              onChangeText={setManual}
+              keyboardType="number-pad"
+              placeholder={t('walk.stepsPlaceholder')}
+              placeholderTextColor={theme.textMuted}
+              style={[
+                styles.input,
+                { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface },
+              ]}
+            />
+            <PillButton label={t('walk.log')} onPress={submitManual} />
+          </View>
+        </Card>
+      </FadeIn>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: {
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.five,
-  },
-  inner: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    gap: Spacing.four,
-    paddingTop: Spacing.four,
-  },
-  card: {
-    alignSelf: 'stretch',
-    padding: Spacing.four,
-    borderRadius: Spacing.four,
-    gap: Spacing.two,
-  },
-  button: {
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginTop: Spacing.one,
-  },
-  manualRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    marginTop: Spacing.one,
-  },
+  card: { alignSelf: 'stretch', gap: Spacing.two },
+  manualRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: Spacing.one },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Radii.md,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingVertical: 12,
     fontSize: 16,
   },
 });

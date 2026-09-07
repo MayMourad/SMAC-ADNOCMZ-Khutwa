@@ -1,33 +1,30 @@
 /**
- * SignInScreen
- * ============
- *
- * Shown by <AuthGate> when Firebase is configured but nobody is signed in.
- * Two ways in: email/password (so a member can sign in on a 2nd device) or a
- * one-tap anonymous account (fast for the demo).
- *
- * It doesn't navigate anywhere on success — `useAuth()` picks up the new user
- * via onAuthStateChanged and <AuthGate> swaps this screen out.
+ * SignInScreen — shown by <AuthOverlay> when nobody is signed in.
+ * Email/password or a one-tap anonymous account. Success is picked up by
+ * useAuth via onAuthStateChanged; this screen doesn't navigate.
  */
 
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+import { FadeIn } from '@/components/fade-in';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Card } from '@/components/card';
+import { LanguageToggle } from '@/components/language-toggle';
+import { PillButton } from '@/components/pill-button';
+import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radii, Spacing } from '@/constants/theme';
+import { useLang } from '@/i18n';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  signInAnon,
-  signInWithEmail,
-  signUpWithEmail,
-} from '@/services/firebase';
+import { signInAnon, signInWithEmail, signUpWithEmail } from '@/services/firebase';
 
 type Mode = 'sign-in' | 'sign-up';
 
 export function SignInScreen() {
   const theme = useTheme();
+  const { t } = useLang();
   const [mode, setMode] = useState<Mode>('sign-in');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -54,84 +51,81 @@ export function SignInScreen() {
         : signUpWithEmail(email, password, name),
     );
 
+  const input = (
+    props: React.ComponentProps<typeof TextInput>,
+  ) => (
+    <TextInput
+      placeholderTextColor={theme.textMuted}
+      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundAlt }]}
+      {...props}
+    />
+  );
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.inner}>
-        <View style={styles.header}>
-          <ThemedText type="title">Khutwa</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Every step waters the story.
+      <SafeAreaView style={styles.safe}>
+        <FadeIn style={styles.header}>
+          <ThemedText type="display" ltr>
+            {t('app.name')}
           </ThemedText>
-        </View>
+          <ThemedText type="bodySerif" color="textSecondary">
+            {t('app.tagline')}
+          </ThemedText>
+        </FadeIn>
 
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <View style={styles.modeRow}>
-            {(['sign-in', 'sign-up'] as Mode[]).map((m) => (
-              <Pressable key={m} onPress={() => setMode(m)} style={styles.modeBtn}>
-                <ThemedText
-                  type="smallBold"
-                  themeColor={mode === m ? 'text' : 'textSecondary'}>
-                  {m === 'sign-in' ? 'Sign in' : 'Create account'}
-                </ThemedText>
-              </Pressable>
-            ))}
-          </View>
+        <FadeIn delay={80} style={{ width: '100%', alignItems: 'center' }}>
+          <Card style={styles.card}>
+            <View style={styles.modeRow}>
+              {(['sign-in', 'sign-up'] as Mode[]).map((m) => (
+                <PressableScale key={m} haptic={false} activeScale={0.96} onPress={() => setMode(m)}>
+                  <ThemedText
+                    type="subtitle"
+                    style={{ color: mode === m ? theme.text : theme.textMuted }}>
+                    {m === 'sign-in' ? t('auth.signIn') : t('auth.createAccount')}
+                  </ThemedText>
+                </PressableScale>
+              ))}
+            </View>
 
-          {mode === 'sign-up' && (
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Your name"
-              placeholderTextColor={theme.textSecondary}
-              style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-            />
-          )}
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Email"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-          />
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password"
-            secureTextEntry
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-          />
+            {mode === 'sign-up' &&
+              input({ value: name, onChangeText: setName, placeholder: t('auth.name') })}
+            {input({
+              value: email,
+              onChangeText: setEmail,
+              placeholder: t('auth.email'),
+              autoCapitalize: 'none',
+              keyboardType: 'email-address',
+            })}
+            {input({
+              value: password,
+              onChangeText: setPassword,
+              placeholder: t('auth.password'),
+              secureTextEntry: true,
+            })}
 
-          {error && (
-            <ThemedText type="small" style={{ color: '#d9534f' }}>
-              {error}
-            </ThemedText>
-          )}
-
-          <Pressable
-            onPress={submit}
-            disabled={busy}
-            style={({ pressed }) => [
-              styles.primaryBtn,
-              { backgroundColor: theme.text, opacity: pressed || busy ? 0.7 : 1 },
-            ]}>
-            {busy ? (
-              <ActivityIndicator color={theme.background} />
-            ) : (
-              <ThemedText type="smallBold" style={{ color: theme.background }}>
-                {mode === 'sign-in' ? 'Sign in' : 'Create account'}
+            {error && (
+              <ThemedText type="small" style={{ color: theme.danger }}>
+                {error}
               </ThemedText>
             )}
-          </Pressable>
 
-          <Pressable onPress={() => run(signInAnon)} disabled={busy} style={styles.ghostBtn}>
-            <ThemedText type="link" themeColor="textSecondary">
-              Continue without an account
-            </ThemedText>
-          </Pressable>
-        </ThemedView>
+            <PillButton
+              full
+              label={mode === 'sign-in' ? t('auth.signIn') : t('auth.createAccount')}
+              onPress={submit}
+              loading={busy}
+            />
+            <PressableScale haptic={false} onPress={() => run(signInAnon)} style={styles.ghost}>
+              <ThemedText type="callout" color="textMuted">
+                {t('auth.continueAnon')}
+              </ThemedText>
+            </PressableScale>
+          </Card>
+        </FadeIn>
+
+        <View style={styles.footer}>
+          <LanguageToggle compact />
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
@@ -139,31 +133,26 @@ export function SignInScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: {
+  safe: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     alignSelf: 'center',
     width: '100%',
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
     gap: Spacing.five,
   },
-  header: { alignItems: 'center', gap: Spacing.one },
-  card: { padding: Spacing.four, borderRadius: Spacing.four, gap: Spacing.three },
-  modeRow: { flexDirection: 'row', gap: Spacing.four, justifyContent: 'center' },
-  modeBtn: { paddingVertical: Spacing.one },
+  header: { alignItems: 'center', gap: Spacing.two },
+  card: { alignSelf: 'stretch', gap: Spacing.three },
+  modeRow: { flexDirection: 'row', gap: Spacing.four, justifyContent: 'center', marginBottom: Spacing.one },
   input: {
     borderWidth: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Radii.md,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
+    paddingVertical: 14,
     fontSize: 16,
   },
-  primaryBtn: {
-    paddingVertical: Spacing.three,
-    borderRadius: Spacing.three,
-    alignItems: 'center',
-    marginTop: Spacing.one,
-  },
-  ghostBtn: { alignItems: 'center', paddingVertical: Spacing.two },
+  ghost: { alignSelf: 'center', paddingVertical: Spacing.two },
+  footer: { position: 'absolute', bottom: Spacing.five, alignSelf: 'center' },
 });
