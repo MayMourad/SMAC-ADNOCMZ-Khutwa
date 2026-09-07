@@ -1,20 +1,25 @@
 /**
- * AuthGate
- * ========
+ * AuthOverlay
+ * ===========
  *
- * Wraps the tab navigator. Decides what the user sees before the app proper:
+ * Sits on TOP of the (always-mounted) tab navigator and covers it until the
+ * user is signed in and in a family:
  *
- *   Firebase not configured  -> children  (mock mode: always "signed in")
- *   auth still loading         -> spinner
+ *   Firebase not configured    -> nothing (mock mode: always "signed in")
+ *   auth still loading          -> full-screen spinner
  *   no user                    -> <SignInScreen>
- *   user, family still loading -> spinner
+ *   user, family still loading  -> full-screen spinner
  *   user but no family         -> <FamilySetupScreen>
- *   user + family              -> children
+ *   user + family              -> nothing (the tabs underneath show through)
  *
- * Kept as plain conditional rendering (no routing) so the flow is easy to trace.
+ * Why an overlay instead of conditionally rendering the navigator: expo-router
+ * wants the root layout to always render a navigator/Slot. Keeping <AppTabs/>
+ * mounted at all times and painting over it keeps routing happy on every
+ * platform. The screens underneath are inert while unauthenticated (their hooks
+ * early-return without a user).
  */
 
-import { ActivityIndicator, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -25,33 +30,46 @@ import { useFamily } from '@/hooks/use-family';
 import { FamilySetupScreen } from '@/screens/family-setup-screen';
 import { SignInScreen } from '@/screens/sign-in-screen';
 
+function FullScreen({ children }: { children: React.ReactNode }) {
+  return <View style={styles.overlay}>{children}</View>;
+}
+
 function Loading({ label }: { label: string }) {
   return (
-    <ThemedView style={styles.center}>
-      <ActivityIndicator />
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-    </ThemedView>
+    <FullScreen>
+      <ThemedView style={styles.center}>
+        <ActivityIndicator />
+        <ThemedText type="small" themeColor="textSecondary">
+          {label}
+        </ThemedText>
+      </ThemedView>
+    </FullScreen>
   );
 }
 
-export function AuthGate({ children }: { children: React.ReactNode }) {
+export function AuthOverlay() {
   const { user, loading: authLoading } = useAuth();
   const { family, loading: familyLoading, reload } = useFamily(user?.uid ?? null);
 
-  // Mock mode — no Firebase, so skip the whole flow.
-  if (!isFirebaseConfigured) return <>{children}</>;
-
+  if (!isFirebaseConfigured) return null; // mock mode — no gate
   if (authLoading) return <Loading label="Starting Khutwa…" />;
-  if (!user) return <SignInScreen />;
+  if (!user) return <FullScreen><SignInScreen /></FullScreen>;
   if (familyLoading) return <Loading label="Finding your family…" />;
-  if (!family) return <FamilySetupScreen onDone={reload} />;
+  if (!family) return <FullScreen><FamilySetupScreen onDone={reload} /></FullScreen>;
 
-  return <>{children}</>;
+  return null; // signed in + in a family — show the app underneath
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+    elevation: 100,
+  },
   center: {
     flex: 1,
     alignItems: 'center',

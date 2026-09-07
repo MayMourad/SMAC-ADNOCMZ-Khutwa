@@ -30,7 +30,13 @@ export function useFamily(uid: string | null): {
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
   useEffect(() => {
-    if (!isFirebaseConfigured || !uid) return;
+    if (!isFirebaseConfigured) return;
+    if (!uid) {
+      // No user yet (signed out) — nothing to load.
+      setFamily(null);
+      setLoading(false);
+      return;
+    }
     let unsub = () => {};
     let cancelled = false;
     setLoading(true);
