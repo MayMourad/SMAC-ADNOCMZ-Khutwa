@@ -8,19 +8,17 @@ Theme: AI for a Stronger Family Bonds
 
 ## 📥 Download & Try It
 
-**Android APK — any device, no account, free:**
+**Android — direct APK (any device, no account, free):**
 
 > **https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk**
-
-**EXPO Go for iOS**
-> **https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b**
 
 Open the link on an Android phone → download → tap the file → allow *"install unknown
 apps"* → Install. First launch needs an internet connection (Firebase); a phone
 hotspot is fine.
 
-- **Build page (QR code + install button):** https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b
-- **Full install notes + iOS / Expo Go route:** [`DOWNLOAD.md`](DOWNLOAD.md)
+- **Android — EAS build page (QR code + install button):** https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b
+- **iOS / any device — Expo Go:** install Expo Go, then run `npx expo start --tunnel` in the repo and scan the QR (`--tunnel` works on any network). Standalone iOS distribution needs a paid Apple Developer account.
+- **Full install notes:** [`DOWNLOAD.md`](DOWNLOAD.md) · **all links:** [`LINKS.md`](LINKS.md)
 - **App overview & functionality brief:** [`docs/app-overview.md`](docs/app-overview.md)
 
 ---

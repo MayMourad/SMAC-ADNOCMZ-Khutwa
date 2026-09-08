@@ -121,11 +121,17 @@ falls back to a calm resting state when the OS requests it.
 
 ## Try it
 
-- **Android:** <https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk>
-  — open on the phone, download, install (allow "install unknown apps"). First
-  launch needs internet; a hotspot is fine. Full notes: [`../DOWNLOAD.md`](../DOWNLOAD.md).
-- **iOS / any device:** install Expo Go, run `npx expo start --tunnel` in the
-  repo, scan the QR.
+- **Android — direct APK (any device, free, no account):**
+  <https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk>
+  — open on an Android phone, download, tap the file, allow *"install unknown
+  apps"*, Install. First launch needs an internet connection (Firebase); a phone
+  hotspot works. Full notes: [`../DOWNLOAD.md`](../DOWNLOAD.md).
+- **Android — EAS build page (QR code + install button):**
+  <https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b>
+- **iOS / any device — Expo Go:** install Expo Go from the App Store, then from
+  the repo run `npx expo start --tunnel` and scan the QR. `--tunnel` works on any
+  network. Standalone iOS distribution requires a paid Apple Developer account
+  and is out of scope.
 - **Code:** <https://github.com/MayMourad/SMAC-ADNOCMZ-Khutwa>
 
 ## Roadmap
