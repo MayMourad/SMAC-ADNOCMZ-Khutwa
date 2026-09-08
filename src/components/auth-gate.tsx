@@ -6,13 +6,15 @@
  * user is signed in and in a family:
  *
  *   Firebase not configured    -> nothing (mock mode: always "signed in")
- *   auth still loading          -> full-screen spinner
- *   no user                    -> <SignInScreen>
- *   user, family still loading  -> full-screen spinner
- *   user but no family         -> <FamilySetupScreen>
- *   user + family              -> nothing (the tabs underneath show through)
+ *   auth loading                -> spinner
+ *   no user, landing not passed  -> <LandingScreen>
+ *   no user                     -> <SignInScreen>
+ *   user, family loading         -> spinner
+ *   user but no family          -> <FamilySetupScreen>
+ *   user + family               -> nothing (tabs show through)
  */
 
+import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -23,6 +25,7 @@ import { useLang } from '@/i18n';
 import { useAuth } from '@/hooks/use-auth';
 import { useFamily } from '@/hooks/use-family';
 import { FamilySetupScreen } from '@/screens/family-setup-screen';
+import { LandingScreen } from '@/screens/landing-screen';
 import { SignInScreen } from '@/screens/sign-in-screen';
 
 function FullScreen({ children }: { children: React.ReactNode }) {
@@ -46,10 +49,21 @@ export function AuthOverlay() {
   const { t } = useLang();
   const { user, loading: authLoading } = useAuth();
   const { family, loading: familyLoading, reload } = useFamily(user?.uid ?? null);
+  const [passedLanding, setPassedLanding] = useState(false);
 
   if (!isFirebaseConfigured) return null;
   if (authLoading) return <Loading label={t('auth.starting')} />;
-  if (!user) return <FullScreen><SignInScreen /></FullScreen>;
+  if (!user) {
+    return (
+      <FullScreen>
+        {passedLanding ? (
+          <SignInScreen onBack={() => setPassedLanding(false)} />
+        ) : (
+          <LandingScreen onGetStarted={() => setPassedLanding(true)} />
+        )}
+      </FullScreen>
+    );
+  }
   if (familyLoading) return <Loading label={t('setup.finding')} />;
   if (!family) return <FullScreen><FamilySetupScreen onDone={reload} /></FullScreen>;
 

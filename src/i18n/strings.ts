@@ -29,9 +29,20 @@ const en: Dict = {
   'common.errorBody':
     'The app hit an unexpected error. You can try again — if it keeps happening, restart the app.',
 
+  // landing
+  'landing.get_started': 'Get started',
+  'landing.have_code': 'I have an invite code',
+  'landing.value1.title': 'Walk together',
+  'landing.value1.body': 'Your family’s steps grow one shared Ghaf tree.',
+  'landing.value2.title': 'Unlock the stories',
+  'landing.value2.body': 'Near a family place, a short heritage story is read aloud.',
+  'landing.value3.title': 'Bloom when you’re together',
+  'landing.value3.body': 'Stand in the same place and the tree lights up.',
+
   // auth
   'auth.signIn': 'Sign in',
   'auth.createAccount': 'Create account',
+  'auth.back': 'Back',
   'auth.name': 'Your name',
   'auth.email': 'Email',
   'auth.password': 'Password',
@@ -135,8 +146,18 @@ const ar: Dict = {
   'common.errorBody':
     'واجه التطبيق خطأً غير متوقع. يمكنك المحاولة مجددًا — وإذا استمر، أعد تشغيل التطبيق.',
 
+  'landing.get_started': 'لنبدأ',
+  'landing.have_code': 'لديّ رمز دعوة',
+  'landing.value1.title': 'امشوا معًا',
+  'landing.value1.body': 'خطوات عائلتك تُنمّي شجرة غاف واحدة تجمعكم.',
+  'landing.value2.title': 'افتحوا الحكايات',
+  'landing.value2.body': 'قرب مكان عزيز على العائلة، تُروى حكاية تراثية قصيرة.',
+  'landing.value3.title': 'تُزهر حين تجتمعون',
+  'landing.value3.body': 'قِفوا في المكان نفسه فتُضيء الشجرة.',
+
   'auth.signIn': 'تسجيل الدخول',
   'auth.createAccount': 'إنشاء حساب',
+  'auth.back': 'رجوع',
   'auth.name': 'اسمك',
   'auth.email': 'البريد الإلكتروني',
   'auth.password': 'كلمة المرور',

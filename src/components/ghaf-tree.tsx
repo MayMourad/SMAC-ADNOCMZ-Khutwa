@@ -32,10 +32,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Svg, {
+  Circle,
   Defs,
   Ellipse,
+  G,
   LinearGradient,
   Path,
+  RadialGradient,
   Stop,
 } from 'react-native-svg';
 
@@ -217,20 +220,30 @@ function TreeSvg({
 }) {
   const W = 100;
   const H = 100;
-  const groundY = 86;
+  const groundY = 87;
+  const cx = W / 2;
 
-  // trunk grows taller + thicker with g
-  const trunkH = 8 + g * 34;
-  const trunkTopY = groundY - trunkH;
-  const trunkW = 2.2 + g * 7;
+  // trunk: taller, thicker and a touch more curved as it grows
+  const trunkH = 7 + g * 36;
+  const topY = groundY - trunkH;
+  const trunkW = 2 + g * 8;
+  const lean = (g - 0.3) * 4; // slight character bend once established
 
-  // canopy grows wide + low (the Ghaf umbrella) with g
-  const canopyRx = 6 + g * 40;
-  const canopyRy = 4 + g * 20;
-  const canopyCy = trunkTopY - canopyRy * 0.35;
+  // canopy: the wide, low Ghaf umbrella
+  const rx = 7 + g * 41;
+  const ry = 5 + g * 19;
+  const cy = topY - ry * 0.25;
 
-  const showCanopy = g > 0.05;
-  const showBranches = g > 0.4;
+  const hasCanopy = g > 0.06;
+  const hasBranches = g > 0.38;
+  const hasRoots = g > 0.22;
+  // little leaf-cluster tufts around the canopy edge for the "feathery" read
+  const tufts = hasCanopy
+    ? Array.from({ length: Math.round(4 + g * 8) }, (_, i) => {
+        const a = Math.PI + (i / Math.round(4 + g * 8)) * Math.PI;
+        return { x: cx + Math.cos(a) * rx * 0.92, y: cy + Math.sin(a) * ry * 0.82 };
+      })
+    : [];
 
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${W} ${H}`}>
@@ -239,77 +252,75 @@ function TreeSvg({
           <Stop offset="0" stopColor={primary} />
           <Stop offset="1" stopColor={primaryDeep} />
         </LinearGradient>
+        <LinearGradient id="bark" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor={BARK_DARK} />
+          <Stop offset="0.5" stopColor={BARK} />
+          <Stop offset="1" stopColor={BARK_DARK} />
+        </LinearGradient>
+        <RadialGradient id="soil" cx="50%" cy="50%" r="50%">
+          <Stop offset="0" stopColor="#000000" stopOpacity={0.12} />
+          <Stop offset="1" stopColor="#000000" stopOpacity={0} />
+        </RadialGradient>
       </Defs>
 
-      {/* dune */}
-      <Ellipse cx={W / 2} cy={groundY + 8} rx={44} ry={9} fill={primary} opacity={0.12} />
+      {/* cast shadow */}
+      <Ellipse cx={cx + 3} cy={groundY + 3} rx={4 + rx * 0.7} ry={4 + g * 5} fill="url(#soil)" />
 
-      {/* trunk */}
-      <Path
-        d={`M ${W / 2 - trunkW / 2} ${groundY}
-            Q ${W / 2 - trunkW * 0.2} ${trunkTopY + trunkH * 0.4} ${W / 2 - trunkW * 0.35} ${trunkTopY}
-            L ${W / 2 + trunkW * 0.35} ${trunkTopY}
-            Q ${W / 2 + trunkW * 0.2} ${trunkTopY + trunkH * 0.4} ${W / 2 + trunkW / 2} ${groundY} Z`}
-        fill={BARK}
-      />
-      <Path
-        d={`M ${W / 2} ${groundY} L ${W / 2} ${trunkTopY}`}
-        stroke={BARK_DARK}
-        strokeWidth={0.6}
-        opacity={0.5}
-      />
-
-      {showBranches && (
-        <>
-          <Path
-            d={`M ${W / 2} ${trunkTopY + 6} q -10 -4 -16 -12`}
-            stroke={BARK}
-            strokeWidth={2 + g}
-            fill="none"
-            strokeLinecap="round"
-          />
-          <Path
-            d={`M ${W / 2} ${trunkTopY + 9} q 10 -3 15 -11`}
-            stroke={BARK}
-            strokeWidth={2 + g}
-            fill="none"
-            strokeLinecap="round"
-          />
-        </>
+      {/* surface roots */}
+      {hasRoots && (
+        <G stroke={BARK} strokeLinecap="round" fill="none">
+          <Path d={`M ${cx - 1} ${groundY - 1} q -6 1 -11 4`} strokeWidth={1.4 + g} />
+          <Path d={`M ${cx + 1} ${groundY - 1} q 6 1 12 3`} strokeWidth={1.4 + g} />
+          <Path d={`M ${cx} ${groundY} q -2 2 -5 4`} strokeWidth={1 + g * 0.6} />
+        </G>
       )}
 
-      {showCanopy && (
+      {/* trunk — tapered, gently curved */}
+      <Path
+        d={`M ${cx - trunkW / 2} ${groundY}
+            C ${cx - trunkW * 0.55} ${groundY - trunkH * 0.5} ${cx - trunkW * 0.15 + lean} ${topY + trunkH * 0.35} ${cx - trunkW * 0.3 + lean} ${topY}
+            L ${cx + trunkW * 0.3 + lean} ${topY}
+            C ${cx + trunkW * 0.15 + lean} ${topY + trunkH * 0.35} ${cx + trunkW * 0.55} ${groundY - trunkH * 0.5} ${cx + trunkW / 2} ${groundY} Z`}
+        fill="url(#bark)"
+      />
+
+      {hasBranches && (
+        <G stroke={BARK} strokeLinecap="round" fill="none">
+          <Path d={`M ${cx + lean} ${topY + 5} q -12 -3 -19 -13`} strokeWidth={1.6 + g * 1.4} />
+          <Path d={`M ${cx + lean} ${topY + 8} q 12 -2 18 -12`} strokeWidth={1.6 + g * 1.4} />
+          <Path d={`M ${cx + lean} ${topY + 3} q -3 -6 -4 -11`} strokeWidth={1.2 + g} />
+        </G>
+      )}
+
+      {hasCanopy ? (
         <>
-          <Ellipse cx={W / 2} cy={canopyCy} rx={canopyRx} ry={canopyRy} fill="url(#canopy)" />
-          <Ellipse
-            cx={W / 2 - canopyRx * 0.4}
-            cy={canopyCy - canopyRy * 0.2}
-            rx={canopyRx * 0.55}
-            ry={canopyRy * 0.8}
-            fill="url(#canopy)"
-          />
-          <Ellipse
-            cx={W / 2 + canopyRx * 0.42}
-            cy={canopyCy - canopyRy * 0.1}
-            rx={canopyRx * 0.5}
-            ry={canopyRy * 0.75}
-            fill="url(#canopy)"
-          />
+          {/* darker underside */}
+          <Ellipse cx={cx + lean} cy={cy + ry * 0.25} rx={rx * 0.98} ry={ry * 0.9} fill={primaryDeep} />
+          {/* main mass — layered organic blobs */}
+          <Ellipse cx={cx + lean} cy={cy} rx={rx} ry={ry} fill="url(#canopy)" />
+          <Ellipse cx={cx - rx * 0.42 + lean} cy={cy - ry * 0.15} rx={rx * 0.6} ry={ry * 0.85} fill="url(#canopy)" />
+          <Ellipse cx={cx + rx * 0.45 + lean} cy={cy - ry * 0.08} rx={rx * 0.55} ry={ry * 0.8} fill="url(#canopy)" />
+          <Ellipse cx={cx + lean} cy={cy - ry * 0.55} rx={rx * 0.6} ry={ry * 0.55} fill="url(#canopy)" />
+          {/* feathery edge tufts */}
+          {tufts.map((p, i) => (
+            <Circle key={i} cx={p.x + lean} cy={p.y} r={ry * 0.16 + 0.6} fill={primary} opacity={0.9} />
+          ))}
           {/* sun-side highlight */}
           <Ellipse
-            cx={W / 2 - canopyRx * 0.3}
-            cy={canopyCy - canopyRy * 0.4}
-            rx={canopyRx * 0.35}
-            ry={canopyRy * 0.4}
-            fill={primary}
-            opacity={0.5}
+            cx={cx - rx * 0.3 + lean}
+            cy={cy - ry * 0.4}
+            rx={rx * 0.34}
+            ry={ry * 0.38}
+            fill="#FFFFFF"
+            opacity={0.14}
           />
         </>
-      )}
-
-      {/* a sprout dot for the seed stage */}
-      {!showCanopy && (
-        <Ellipse cx={W / 2} cy={trunkTopY - 1} rx={2.4} ry={2.4} fill={primary} />
+      ) : (
+        // seed / sprout: a pair of tiny leaves
+        <G fill={primary}>
+          <Ellipse cx={cx - 2} cy={topY - 1} rx={2.6} ry={1.6} />
+          <Ellipse cx={cx + 2} cy={topY - 2} rx={2.6} ry={1.6} />
+        </G>
       )}
     </Svg>
   );
