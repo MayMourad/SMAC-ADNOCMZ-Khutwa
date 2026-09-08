@@ -12,6 +12,9 @@ Theme: AI for a Stronger Family Bonds
 
 > **https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk**
 
+**EXPO Go for iOS**
+> **https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b**
+
 Open the link on an Android phone → download → tap the file → allow *"install unknown
 apps"* → Install. First launch needs an internet connection (Firebase); a phone
 hotspot is fine.
