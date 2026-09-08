@@ -2,15 +2,23 @@
  * OasisScene
  * ==========
  *
- * The illustrated backdrop for the landing + login screens: a gradient sky that
- * shifts with a `mood`, a low sun/moon, layered sand dunes, faint stars, rising
- * motes, and (optionally) the Ghaf tree standing on the front dune.
+ * The illustrated backdrop for the landing + login screens: a gradient sky, a
+ * low sun, layered sand dunes, faint stars, rising motes, and (optionally) the
+ * Ghaf tree standing on the front dune.
  *
- * Inspired by "Dayrise" — a dynamic sky that changes with progress. Here the
- * mood can be driven by the family's growth stage / bloom state.
+ * Inspired by "Dayrise" — a sky that *reacts*. Two ways it moves here:
  *
- * Motion (device only — Reanimated doesn't drive web here, so it renders
- * static): the two back dune layers drift a few px on a slow loop, motes rise.
+ *  1. `scrollY` (a shared value from the screen's scroll view): as the page is
+ *     pulled up the sun sinks below the dunes, a night gradient fades in and the
+ *     stars brighten — dusk -> night, driven 1:1 by the scroll position. This is
+ *     input-driven, so it runs on web too, not just device.
+ *
+ *  2. `blooming`: the tree lights up — gold glow, rising motes, a Success haptic
+ *     on device (the screens wire a tap-zone over the crown to toggle this). A
+ *     plain static glow stands in on web where Reanimated's timed glow doesn't
+ *     run.
+ *
+ * Ambient motion (device only): the back dune layers drift, motes rise.
  */
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,10 +28,12 @@ import Animated, {
   Easing,
   cancelAnimation,
   useAnimatedStyle,
+  useDerivedValue,
   useReducedMotion,
   useSharedValue,
   withRepeat,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, Ellipse, Path, RadialGradient, Stop } from 'react-native-svg';
 
@@ -44,6 +54,8 @@ const SUN: Record<SceneMood, string> = {
   dusk: '#E9A24C',
   bloom: '#F2C56A',
 };
+// the colour the sky settles to once the page is fully pulled up
+const NIGHT: [string, string, string] = ['#2E2C42', '#3C3650', '#574a5b'];
 
 const MOTES = 7;
 
@@ -54,6 +66,8 @@ export function OasisScene({
   stage = 'young',
   blooming = false,
   treeSize,
+  scrollY,
+  nightAt = 200,
   style,
 }: {
   mood?: SceneMood;
@@ -62,10 +76,24 @@ export function OasisScene({
   stage?: GrowthStage;
   blooming?: boolean;
   treeSize?: number;
+  /** Scroll offset of the screen's scroll view. Drives the dusk -> night shift. */
+  scrollY?: SharedValue<number>;
+  /** Pixels of scroll over which the sky goes fully to night. */
+  nightAt?: number;
   style?: ViewStyle;
 }) {
   const reduced = useReducedMotion() || Platform.OS === 'web';
   const drift = useSharedValue(0);
+  // 0 -> 1 when the tree blooms: warms the whole sky to gold
+  const bloomSky = useSharedValue(blooming ? 1 : 0);
+
+  // 0 at rest, 1 when the page is pulled all the way up
+  const p = useDerivedValue(() => {
+    'worklet';
+    if (!scrollY) return 0;
+    const v = scrollY.get() / nightAt;
+    return v < 0 ? 0 : v > 1 ? 1 : v;
+  });
 
   useEffect(() => {
     if (reduced) return;
@@ -75,50 +103,90 @@ export function OasisScene({
     return () => cancelAnimation(drift);
   }, [reduced, drift]);
 
+  useEffect(() => {
+    // on web this is a direct set (instant); on device it crossfades
+    bloomSky.set(reduced ? (blooming ? 1 : 0) : withTiming(blooming ? 1 : 0, { duration: 600 }));
+  }, [blooming, reduced, bloomSky]);
+
   const backDune = useAnimatedStyle(() => ({
-    transform: [{ translateX: (drift.get() - 0.5) * 18 }],
+    transform: [{ translateX: (drift.get() - 0.5) * 18 }, { translateY: p.get() * -10 }],
   }));
   const midDune = useAnimatedStyle(() => ({
-    transform: [{ translateX: (drift.get() - 0.5) * -10 }],
+    transform: [{ translateX: (drift.get() - 0.5) * -10 }, { translateY: p.get() * -6 }],
+  }));
+  const nightStyle = useAnimatedStyle(() => ({ opacity: p.get() }));
+  const bloomStyle = useAnimatedStyle(() => ({ opacity: bloomSky.get() * 0.7 }));
+  const starStyle = useAnimatedStyle(() => ({ opacity: 0.12 + p.get() * 0.66 }));
+  const sunStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: p.get() * height * 0.34 }],
+    opacity: 1 - p.get() * 0.9,
   }));
 
   const [c0, c1, c2] = SKY[mood];
   const sun = SUN[mood];
+  const showStars = mood === 'dawn' || mood === 'dusk' || !!scrollY;
   const W = 100;
   const H = 100;
+
+  const treeBlooming = blooming || mood === 'bloom';
 
   return (
     <View style={[{ height, overflow: 'hidden' }, style]}>
       <LinearGradient colors={[c0, c1, c2]} style={StyleSheet.absoluteFill} />
 
-      {/* stars (dawn / dusk only) */}
-      {(mood === 'dawn' || mood === 'dusk') && (
-        <Svg style={StyleSheet.absoluteFill} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice">
-          {[
-            [12, 14],
-            [28, 8],
-            [46, 18],
-            [70, 10],
-            [84, 22],
-            [60, 6],
-            [92, 12],
-          ].map(([x, y], i) => (
-            <Circle key={i} cx={x} cy={y} r={0.5} fill="#FFFFFF" opacity={0.5} />
-          ))}
-        </Svg>
+      {/* night sky — fades in as the page is pulled up */}
+      {scrollY && (
+        <Animated.View style={[StyleSheet.absoluteFill, nightStyle]}>
+          <LinearGradient colors={NIGHT} style={StyleSheet.absoluteFill} />
+        </Animated.View>
       )}
 
-      {/* sun / moon with soft halo */}
-      <Svg style={StyleSheet.absoluteFill} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice">
-        <Defs>
-          <RadialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={sun} stopOpacity={0.9} />
-            <Stop offset="1" stopColor={sun} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={68} cy={40} r={22} fill="url(#sunGlow)" />
-        <Circle cx={68} cy={40} r={8} fill={sun} />
-      </Svg>
+      {/* golden wash — fades in when the tree blooms */}
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, bloomStyle]}>
+        <LinearGradient colors={SKY.bloom} style={StyleSheet.absoluteFill} />
+      </Animated.View>
+
+      {/* stars */}
+      {showStars && (
+        <Animated.View style={[StyleSheet.absoluteFill, scrollY ? starStyle : undefined]}>
+          <Svg
+            style={StyleSheet.absoluteFill}
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="xMidYMid slice">
+            {[
+              [12, 14],
+              [28, 8],
+              [46, 18],
+              [70, 10],
+              [84, 22],
+              [60, 6],
+              [92, 12],
+              [20, 26],
+              [38, 4],
+              [78, 30],
+            ].map(([x, y], i) => (
+              <Circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 0.7 : 0.5} fill="#FFFFFF" opacity={0.55} />
+            ))}
+          </Svg>
+        </Animated.View>
+      )}
+
+      {/* sun with soft halo — sinks below the dunes as p -> 1 */}
+      <Animated.View style={[StyleSheet.absoluteFill, scrollY ? sunStyle : undefined]}>
+        <Svg
+          style={StyleSheet.absoluteFill}
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="xMidYMid slice">
+          <Defs>
+            <RadialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={sun} stopOpacity={0.9} />
+              <Stop offset="1" stopColor={sun} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={68} cy={40} r={22} fill="url(#sunGlow)" />
+          <Circle cx={68} cy={40} r={8} fill={sun} />
+        </Svg>
+      </Animated.View>
 
       {/* dunes — back to front */}
       <Animated.View style={[StyleSheet.absoluteFill, backDune]}>
@@ -139,9 +207,23 @@ export function OasisScene({
       {/* the tree, standing on the front dune */}
       {showTree && (
         <View style={styles.treeSlot} pointerEvents="none">
+          {/* web stand-in for the bloom glow (Reanimated's timed glow is device-only) */}
+          {treeBlooming && Platform.OS === 'web' && (
+            <View
+              style={[
+                styles.webGlow,
+                {
+                  width: (treeSize ?? 200) * 0.85,
+                  height: (treeSize ?? 200) * 0.85,
+                  borderRadius: treeSize ?? 200,
+                  backgroundColor: SUN.bloom,
+                },
+              ]}
+            />
+          )}
           <GhafTree
             stage={stage}
-            blooming={blooming || mood === 'bloom'}
+            blooming={treeBlooming}
             size={treeSize ?? Math.min(height * 0.9, 240)}
           />
         </View>
@@ -212,5 +294,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: -8,
     alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  webGlow: {
+    position: 'absolute',
+    alignSelf: 'center',
+    bottom: 0,
+    opacity: 0.32,
   },
 });

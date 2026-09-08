@@ -32,6 +32,7 @@ const en: Dict = {
   // landing
   'landing.get_started': 'Get started',
   'landing.have_code': 'I have an invite code',
+  'landing.tap_tree': 'Tap the tree to make it bloom',
   'landing.value1.title': 'Walk together',
   'landing.value1.body': 'Your family’s steps grow one shared Ghaf tree.',
   'landing.value2.title': 'Unlock the stories',
@@ -148,6 +149,7 @@ const ar: Dict = {
 
   'landing.get_started': 'لنبدأ',
   'landing.have_code': 'لديّ رمز دعوة',
+  'landing.tap_tree': 'المس الشجرة لتُزهر',
   'landing.value1.title': 'امشوا معًا',
   'landing.value1.body': 'خطوات عائلتك تُنمّي شجرة غاف واحدة تجمعكم.',
   'landing.value2.title': 'افتحوا الحكايات',

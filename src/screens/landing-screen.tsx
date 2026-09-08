@@ -10,8 +10,11 @@
  * Shown by <AuthOverlay> before the sign-in screen; "Get started" advances.
  */
 
+import * as Haptics from 'expo-haptics';
 import { Sparkles, Footprints, BookOpen } from 'lucide-react-native';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FadeIn } from '@/components/fade-in';
@@ -31,6 +34,24 @@ export function LandingScreen({ onGetStarted }: { onGetStarted: () => void }) {
   const theme = useTheme();
   const { t } = useLang();
 
+  // scroll position drives the dusk -> night shift in the scene behind the sheet
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.set(e.contentOffset.y);
+  });
+
+  // tap the tree crown -> it blooms for a few seconds
+  const [bloomed, setBloomed] = useState(false);
+  const bloomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bloomTree = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+    setBloomed(true);
+    if (bloomTimer.current) clearTimeout(bloomTimer.current);
+    bloomTimer.current = setTimeout(() => setBloomed(false), 3600);
+  }, []);
+
   const values = [
     { Icon: Footprints, key: 'value1' },
     { Icon: BookOpen, key: 'value2' },
@@ -44,10 +65,23 @@ export function LandingScreen({ onGetStarted }: { onGetStarted: () => void }) {
         stage="mature"
         height={SCENE_H}
         treeSize={170}
+        scrollY={scrollY}
+        nightAt={170}
+        blooming={bloomed}
         style={styles.scene}
       />
 
-      <ScrollView
+      {/* invisible tap-zone over the visible crown — sits above the scroll view */}
+      <Pressable
+        style={styles.treeTapZone}
+        onPress={bloomTree}
+        accessibilityRole="button"
+        accessibilityLabel={t('landing.tap_tree')}
+      />
+
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}>
         {/* solid sheet that starts just under the tree */}
@@ -94,7 +128,7 @@ export function LandingScreen({ onGetStarted }: { onGetStarted: () => void }) {
             </View>
           </SafeAreaView>
         </ThemedView>
-      </ScrollView>
+      </Animated.ScrollView>
     </ThemedView>
   );
 }
@@ -102,6 +136,14 @@ export function LandingScreen({ onGetStarted }: { onGetStarted: () => void }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scene: { position: 'absolute', top: 0, left: 0, right: 0 },
+  treeTapZone: {
+    position: 'absolute',
+    top: 165,
+    alignSelf: 'center',
+    width: 200,
+    height: 105,
+    zIndex: 20,
+  },
   scroll: { flexGrow: 1, paddingTop: SCENE_H - 34 },
   sheet: {
     flex: 1,

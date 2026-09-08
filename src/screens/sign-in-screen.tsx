@@ -5,9 +5,10 @@
  * useAuth via onAuthStateChanged. `onBack` returns to the landing screen.
  */
 
+import * as Haptics from 'expo-haptics';
 import { ChevronLeft } from 'lucide-react-native';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/card';
@@ -34,6 +35,18 @@ export function SignInScreen({ onBack }: { onBack?: () => void }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // tap the tree crown -> it blooms for a few seconds
+  const [bloomed, setBloomed] = useState(false);
+  const bloomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bloomTree = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+    setBloomed(true);
+    if (bloomTimer.current) clearTimeout(bloomTimer.current);
+    bloomTimer.current = setTimeout(() => setBloomed(false), 3600);
+  }, []);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -67,7 +80,22 @@ export function SignInScreen({ onBack }: { onBack?: () => void }) {
 
   return (
     <ThemedView style={styles.container}>
-      <OasisScene mood="dawn" stage="young" height={230} treeSize={150} style={styles.scene} />
+      <OasisScene
+        mood="dawn"
+        stage="young"
+        height={230}
+        treeSize={150}
+        blooming={bloomed}
+        style={styles.scene}
+      />
+
+      {/* invisible tap-zone over the visible crown */}
+      <Pressable
+        style={styles.treeTapZone}
+        onPress={bloomTree}
+        accessibilityRole="button"
+        accessibilityLabel={t('landing.tap_tree')}
+      />
 
       {onBack && (
         <SafeAreaView style={styles.backWrap}>
@@ -156,6 +184,14 @@ export function SignInScreen({ onBack }: { onBack?: () => void }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scene: { position: 'absolute', top: 0, left: 0, right: 0 },
+  treeTapZone: {
+    position: 'absolute',
+    top: 115,
+    alignSelf: 'center',
+    width: 180,
+    height: 95,
+    zIndex: 20,
+  },
   backWrap: { position: 'absolute', top: 0, left: 0, zIndex: 10 },
   back: {
     flexDirection: 'row',
