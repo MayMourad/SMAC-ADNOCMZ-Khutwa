@@ -104,7 +104,17 @@ export async function requestPermissions(options?: {
   const fg = await Location.requestForegroundPermissionsAsync();
   let bg = { granted: false } as { granted: boolean };
   if (options?.background && fg.granted && Platform.OS !== 'web') {
-    bg = await Location.requestBackgroundPermissionsAsync();
+    try {
+      bg = await Location.requestBackgroundPermissionsAsync();
+    } catch (err) {
+      // Background/"Always" location can't be granted in a client that doesn't
+      // carry our Info.plist strings (e.g. Expo Go on iOS -> ERR_LOCATION_INFO_PLIST),
+      // or on a platform build without the background location entitlement.
+      // Fall back to foreground-only rather than letting this throw up into
+      // the caller — the walk screen already handles background:false fine.
+      console.warn('[LocationService] background permission unavailable:', err);
+      bg = { granted: false };
+    }
   }
   return { foreground: fg.granted, background: bg.granted };
 }
