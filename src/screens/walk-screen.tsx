@@ -60,7 +60,23 @@ export function WalkScreen() {
   const [status, setStatus] = useState(t('walk.ready'));
   const [manual, setManual] = useState('');
   const [view, setView] = useState<'list' | 'map'>('list');
+  // Separate from `status` (which is about location/geofencing) because the
+  // step count and the location permission are two independent OS grants —
+  // this is the one visible signal for "why does the live count say 0".
+  const [stepsLive, setStepsLive] = useState<'idle' | 'live' | 'unavailable'>('idle');
   const stopWatchRef = useRef<null | (() => void)>(null);
+
+  // Opening the map is the first time this screen needs location if you
+  // haven't pressed "Start walk" yet — without this, the WebView/iframe's
+  // own geolocation call has nothing to answer with, since the OS-level
+  // grant was never requested. (`requestPermissions` is a no-op the second
+  // time if already granted/denied, so this is safe to fire every time the
+  // Map tab is opened.)
+  useEffect(() => {
+    if (view === 'map') {
+      requestPermissions({ background: false }).catch(() => {});
+    }
+  }, [view]);
 
   // Feed the map the same unlocked/locked state the Stories screen shows.
   const mapLocations = useMemo(
@@ -125,10 +141,12 @@ export function WalkScreen() {
 
     if (stepsGranted) {
       stopWatchRef.current = watchSteps(setLiveSteps);
+      setStepsLive('live');
     } else {
       // No live pedometer this session (web, permission denied, or the
       // device has none) — the manual-entry card below still works.
       stopWatchRef.current = null;
+      setStepsLive('unavailable');
     }
     setWalking(true);
   }, [t]);
@@ -139,6 +157,7 @@ export function WalkScreen() {
     await stopGeofencing();
     stopNarration();
     setWalking(false);
+    setStepsLive('idle');
     setStatus(t('walk.status.ended'));
   }, [t]);
 
@@ -243,6 +262,11 @@ export function WalkScreen() {
               <ThemedText type="small" color="textMuted">
                 {status}
               </ThemedText>
+              {stepsLive === 'unavailable' && (
+                <ThemedText type="small" style={{ color: theme.danger }}>
+                  {t('walk.status.stepsUnavailable')}
+                </ThemedText>
+              )}
             </Card>
           </FadeIn>
 

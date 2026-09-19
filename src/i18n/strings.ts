@@ -110,6 +110,8 @@ const en: Dict = {
   'walk.status.permissionDenied': 'Location permission denied — geofencing is off.',
   'walk.status.startedBg': 'Walk started. Geofencing active in the background.',
   'walk.status.startedFg': 'Walk started. Geofencing active while the app is open.',
+  'walk.status.stepsUnavailable':
+    "Live step count isn't available this session — motion permission was denied, or this device/browser has no step sensor. Use \"Log steps manually\" below.",
   'walk.status.ended': 'Walk ended.',
   'walk.status.reached': "You've reached {place}.",
   'walk.status.storyFinished': 'Story finished.',
@@ -224,6 +226,8 @@ const ar: Dict = {
   'walk.status.permissionDenied': 'رُفض إذن الموقع — تتبّع المواقع متوقّف.',
   'walk.status.startedBg': 'بدأ المشي. تتبّع المواقع يعمل في الخلفية.',
   'walk.status.startedFg': 'بدأ المشي. تتبّع المواقع يعمل أثناء فتح التطبيق.',
+  'walk.status.stepsUnavailable':
+    'عدّاد الخطوات المباشر غير متاح الآن — إمّا رُفض إذن الحركة، أو لا يوجد مستشعر خطوات في هذا الجهاز/المتصفح. استخدم "تسجيل الخطوات يدويًا" أدناه.',
   'walk.status.ended': 'انتهى المشي.',
   'walk.status.reached': 'وصلت إلى {place}.',
   'walk.status.storyFinished': 'انتهت الحكاية.',

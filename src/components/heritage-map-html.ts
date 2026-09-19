@@ -103,9 +103,15 @@ export function buildHeritageMapHtml({
   var note = document.getElementById('note');
 
   var map = L.map('map', { zoomControl: true, attributionControl: true });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  // Wikimedia's "osm-intl" tiles, not the plain OSM default tile server: the
+  // default OSM style always labels the map in the *local* language, which
+  // for the UAE is Arabic only, regardless of the app's own language toggle.
+  // osm-intl renders place names in a consistent Latin/English-first label
+  // set instead, so the base map itself reads the same in both EN and AR —
+  // no API key, no signup, still OpenStreetMap's underlying data.
+  L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors',
+    attribution: 'Wikimedia maps | Map data &copy; OpenStreetMap contributors',
   }).addTo(map);
 
   var markerIcon = function (unlocked) {
