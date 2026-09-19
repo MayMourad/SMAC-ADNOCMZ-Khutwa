@@ -6,7 +6,13 @@ Theme: AI for a Stronger Family Bonds
 
 ---
 
-## 📥 Download & Try It
+## 📥 Open It / Download It
+
+**Open straight in a browser — no install, no Expo, no account:**
+
+> **https://maymourad.github.io/SMAC-ADNOCMZ-Khutwa/**
+
+Deployed automatically from `main` by [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) — this is the same app, running against the same live Firebase project, as the Android build below. Everything works except the two things that genuinely need a phone: the live step counter and background geofencing (the map, stories, scoring, and sign-in all work fully in-browser).
 
 **Android — direct APK (any device, no account, free):**
 

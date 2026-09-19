@@ -1,6 +1,32 @@
 # Download Khutwa
 
-## Android — direct APK (recommended for judging)
+## Open it in a browser (recommended — no install)
+
+**<https://maymourad.github.io/SMAC-ADNOCMZ-Khutwa/>**
+
+No Expo account, no APK, no dev server — this is the live app, built and
+redeployed automatically by [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)
+every time `main` is pushed. It talks to the same live Firebase project as the
+Android build, so signing in / creating a family / walking through the stories
+and the score all work exactly the same way.
+
+What's different on web:
+- **The live step counter and background geofencing don't run** — no
+  pedometer or background-location API in a browser tab. Steps this walk stays
+  0; use "Log steps manually" on the Walk screen instead.
+- **The heritage map works fully** — it asks the browser for location
+  permission the normal way and plots it alongside the 8 landmarks.
+- A few Reanimated-driven animations (spring/bounce effects) render as a
+  static resting state instead of animating — everything is still there, it
+  just doesn't move on web the way it does on a phone.
+
+One-time setup this needs (already done once, only relevant if it's ever
+disabled): repo **Settings → Pages → Build and deployment → Source: "GitHub
+Actions"**.
+
+---
+
+## Android — direct APK
 
 **Download link (public, no account needed):**
 

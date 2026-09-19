@@ -1,5 +1,9 @@
 # Khutwa — Links
 
+## Open in a browser (any device, no install, no account)
+
+https://maymourad.github.io/SMAC-ADNOCMZ-Khutwa/
+
 ## Download the app (Android APK — any device, free, no account)
 
 https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk

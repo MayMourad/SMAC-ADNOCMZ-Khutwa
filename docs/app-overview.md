@@ -1,6 +1,7 @@
 # Khutwa (خطوة) — App Overview & Functionality
 
 **Tagline:** Every step waters the story.
+**Open in a browser (no install):** <https://maymourad.github.io/SMAC-ADNOCMZ-Khutwa/>
 **Download (Android APK, any device, free):** <https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk>
 **Source:** <https://github.com/MayMourad/SMAC-ADNOCMZ-Khutwa>
 
@@ -121,6 +122,10 @@ falls back to a calm resting state when the OS requests it.
 
 ## Try it
 
+- **Open in a browser (any device, no install, no account):**
+  <https://maymourad.github.io/SMAC-ADNOCMZ-Khutwa/> — the full app, same live
+  Firebase data as the Android build. Everything works except the live step
+  counter and background geofencing, which need a phone's sensors.
 - **Android — direct APK (any device, free, no account):**
   <https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk>
   — open on an Android phone, download, tap the file, allow *"install unknown

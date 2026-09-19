@@ -1,0 +1,85 @@
+# Publishes the web build of Khutwa to GitHub Pages on every push to main.
+#
+# This makes the app openable straight from a link — no Expo Go, no APK
+# download, no dev server — for anyone with the URL (e.g. school SLT).
+# Firebase (auth + Firestore) still works normally; it's a public client
+# config by design, same as in the Android build, and access is enforced by
+# Firestore security rules, not by hiding the config.
+#
+# One-time manual step after this first merges (can't be done from a
+# workflow file): repo Settings -> Pages -> Build and deployment -> Source:
+# "GitHub Actions". After that, every push to main redeploys automatically.
+# Live URL: https://<owner>.github.io/<repo>/ (case-sensitive path segment).
+
+name: Deploy web build to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; a new push cancels an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set the web base URL for this Pages run
+        # GitHub Pages serves a project site from https://<owner>.github.io/<repo>/,
+        # not the domain root, so every route/asset needs that /<repo> prefix.
+        # This has to be app.json's experiments.baseUrl -- expo-router's static
+        # export reads it from there, not from an env var (confirmed locally:
+        # EXPO_BASE_URL alone does not change the exported asset paths).
+        # Patched here (not committed to app.json) so local dev at
+        # localhost:8081 is unaffected -- only this CI export gets the prefix.
+        run: |
+          node -e "
+            const fs = require('fs');
+            const p = './app.json';
+            const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+            j.expo.experiments.baseUrl = '/${{ github.event.repository.name }}';
+            fs.writeFileSync(p, JSON.stringify(j, null, 2));
+          "
+
+      - name: Export the static web build
+        run: npx expo export --platform web
+
+      - name: Add .nojekyll
+        # Without this, GitHub Pages' default Jekyll processing silently
+        # drops any folder starting with "_" -- which is exactly where
+        # Expo's static export puts its JS/CSS (dist/_expo/...).
+        run: touch dist/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
