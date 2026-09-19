@@ -84,6 +84,27 @@ export function watchSteps(callback: (stepsSinceStart: number) => void): () => v
   }
 }
 
+/**
+ * Requests permission and subscribes in one call, so a caller can't end up
+ * believing it's tracking live steps when it actually isn't.
+ *
+ * That gap is real: on web, `Pedometer.requestPermissionsAsync()` resolves
+ * `granted: true` (there's no OS permission to deny — nothing web-side
+ * implements Pedometer at all), so checking the permission result alone
+ * says "granted" right before `watchSteps` silently no-ops. `active` here
+ * reflects whether a real listener was actually attached, not just whether
+ * permission was granted.
+ */
+export async function startStepWatch(
+  callback: (stepsSinceStart: number) => void,
+): Promise<{ active: boolean; stop: () => void }> {
+  if (Platform.OS === 'web') return { active: false, stop: () => {} };
+  const granted = await requestStepPermission();
+  if (!granted) return { active: false, stop: () => {} };
+  const stop = watchSteps(callback);
+  return { active: true, stop };
+}
+
 /** Manual fallback so a teammate can enter a step count during testing/demo. */
 export function manualSteps(uid: string, steps: number): DailyStepEntry {
   return {

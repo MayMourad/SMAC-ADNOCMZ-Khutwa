@@ -38,7 +38,7 @@ import {
 import { getStory } from '@/services/llm';
 import { recomputeTree } from '@/services/scoreSync';
 import { narrate, stopNarration } from '@/services/speech';
-import { manualSteps, requestStepPermission, watchSteps } from '@/services/steps';
+import { manualSteps, startStepWatch } from '@/services/steps';
 
 const REGIONS: MemoryRegion[] = CURATED_LOCATIONS.map((l) => ({
   locationId: l.id,
@@ -127,9 +127,9 @@ export function WalkScreen() {
     // Location (for geofencing) and motion (for the live step count) are two
     // separate OS permissions — ask for both, and let either one fail on its
     // own without blocking the other.
-    const [perm, stepsGranted] = await Promise.all([
+    const [perm, steps] = await Promise.all([
       requestPermissions({ background: true }),
-      requestStepPermission(),
+      startStepWatch(setLiveSteps),
     ]);
 
     if (!perm.foreground) {
@@ -139,15 +139,12 @@ export function WalkScreen() {
       setStatus(perm.background ? t('walk.status.startedBg') : t('walk.status.startedFg'));
     }
 
-    if (stepsGranted) {
-      stopWatchRef.current = watchSteps(setLiveSteps);
-      setStepsLive('live');
-    } else {
-      // No live pedometer this session (web, permission denied, or the
-      // device has none) — the manual-entry card below still works.
-      stopWatchRef.current = null;
-      setStepsLive('unavailable');
-    }
+    // `steps.active` reflects whether a live pedometer listener is actually
+    // attached and delivering — not just whether permission was granted
+    // (on web, permission always reports granted since there's nothing to
+    // deny; the platform simply has no Pedometer at all).
+    stopWatchRef.current = steps.active ? steps.stop : null;
+    setStepsLive(steps.active ? 'live' : 'unavailable');
     setWalking(true);
   }, [t]);
 
