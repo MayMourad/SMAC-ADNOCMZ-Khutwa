@@ -93,15 +93,17 @@ export function HomeScreen() {
 
       <FadeIn delay={270}>
         <Card variant="flat" style={styles.memCard}>
-          <View>
+          <View style={styles.memCardText}>
             <ThemedText type="label" color="textMuted" uppercase>
               {t('home.memories')}
             </ThemedText>
             <ThemedText type="body" color="textSecondary" style={{ marginTop: 2 }}>
-              {t('home.memories.hint')}
+              {unlocked >= memories.length && memories.length > 0
+                ? t('home.memories.hintDone')
+                : t('home.memories.hint')}
             </ThemedText>
           </View>
-          <ThemedText type="title" ltr>
+          <ThemedText type="title" ltr style={styles.memCardCount}>
             {unlocked}
             <ThemedText type="subtitle" color="textMuted" ltr>
               {'  '}
@@ -127,4 +129,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.three,
   },
+  // The hint text can run long ("Walk near a family place..."); without a
+  // flex basis on this side, the row never shrinks it and the count on the
+  // right gets pushed straight off the edge of the card (and the screen).
+  memCardText: { flex: 1, minWidth: 0 },
+  // Never shrink/wrap the count itself, whichever side gives way.
+  memCardCount: { flexShrink: 0 },
 });

@@ -103,24 +103,21 @@ export function buildHeritageMapHtml({
   var note = document.getElementById('note');
 
   var map = L.map('map', { zoomControl: true, attributionControl: true });
-  // The plain OpenStreetMap tile server -- reliable, free, no API key, no
-  // signup, no usage cap for an app this size. Two alternatives were tried
-  // to get English-only place labels and both turned out worse in practice:
-  //  - Wikimedia's "osm-intl" tiles render Latin-first labels, but their
-  //    tile server didn't reliably serve tiles to a public site (silently
-  //    failed to load once actually deployed to GitHub Pages).
-  //  - CARTO's free "Voyager" basemap loads and *does* show Latin labels,
-  //    but stamps "API KEY REQUIRED" across the tiles on their free tier --
-  //    worse than the thing we were trying to fix.
-  // Trade-off accepted for now: this tile source's own place/street labels
-  // render in the *local* language (Arabic for the UAE) regardless of the
-  // app's EN/AR toggle -- that part of the map is outside our control on a
-  // free, keyless tile source. Everything Khutwa draws on top of it (pins,
-  // popups, badges, the "you are here" label) is fully bilingual already.
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    subdomains: 'abc',
+  // Esri's free "World Street Map" tiles -- no API key, no signup, and
+  // (unlike OSM's own data) labelled in Latin/English rather than each
+  // region's local script, so this reads the same in EN and AR. Two
+  // OSM-data-based alternatives were tried first and both turned out worse:
+  //  - Wikimedia's "osm-intl" tiles have Latin labels too, but their tile
+  //    server didn't reliably serve a public site (tiles silently failed to
+  //    load once actually deployed to GitHub Pages).
+  //  - CARTO's free "Voyager" basemap loads fine and shows Latin labels, but
+  //    stamps "API KEY REQUIRED" across every tile on their free tier --
+  //    worse than the thing being fixed.
+  // Verified this one loads cleanly both locally and on the live GitHub
+  // Pages deployment before keeping it.
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors',
+    attribution: 'Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
   }).addTo(map);
 
   var markerIcon = function (unlocked) {
@@ -169,6 +166,18 @@ export function buildHeritageMapHtml({
       youMarker.setLatLng([lat, lng]);
     }
   }
+
+  // Called from the native side (heritage-map.tsx, via injectJavaScript) on
+  // iOS, where WKWebView doesn't reliably expose navigator.geolocation to a
+  // page loaded from a raw HTML string (no https:// origin). expo-location
+  // already has the OS permission (shared with geofencing) and feeds the
+  // position in here directly, bypassing the in-page geolocation call below
+  // entirely. Harmless to also have on Android/web -- whichever source
+  // reports a position first just wins.
+  window.khutwaSetLocation = function (lat, lng) {
+    note.textContent = '';
+    placeYou(lat, lng);
+  };
 
   if (navigator.geolocation) {
     note.textContent = STR.locating;

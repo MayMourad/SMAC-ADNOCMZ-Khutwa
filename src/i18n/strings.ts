@@ -75,6 +75,7 @@ const en: Dict = {
   'home.memories': 'Memories unlocked',
   'home.memories.of': 'of {total}',
   'home.memories.hint': 'Walk near a family place to unlock its story.',
+  'home.memories.hintDone': 'Every family place is unlocked — revisit them anytime in Stories.',
 
   // tree captions (by growth stage)
   'tree.seed': 'A seed, waiting for the first walk.',
@@ -195,6 +196,7 @@ const ar: Dict = {
   'home.memories': 'الذكريات المفتوحة',
   'home.memories.of': 'من {total}',
   'home.memories.hint': 'امشِ قرب مكان عزيز على العائلة لتفتح حكايته.',
+  'home.memories.hintDone': 'فُتحت كل أماكن العائلة — عودوا إليها في أي وقت من تبويب الحكايات.',
 
   'tree.seed': 'بذرة تنتظر أول خطوة.',
   'tree.sprout': 'برعم — خطواتكم الأولى معًا.',
