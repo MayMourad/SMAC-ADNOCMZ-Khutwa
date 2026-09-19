@@ -104,7 +104,7 @@ const en: Dict = {
   'walk.weAreDone': "We're done",
   'walk.logManual': 'Log steps manually',
   'walk.logManualHint':
-    "For testing where the pedometer can't read history (e.g. Android).",
+    'For the web version, or wherever the automatic count can\'t read history (e.g. Android).',
   'walk.log': 'Log',
   'walk.stepsPlaceholder': 'e.g. 2500',
   'walk.status.askingPermission': 'Asking for location permission…',
@@ -113,6 +113,8 @@ const en: Dict = {
   'walk.status.startedFg': 'Walk started. Geofencing active while the app is open.',
   'walk.status.stepsUnavailable':
     "Live step count isn't available this session — motion permission was denied, or this device/browser has no step sensor. Use \"Log steps manually\" below.",
+  'walk.status.webNoSteps':
+    'No browser can read a phone\'s step sensor — that only works in the mobile app. Log your steps below instead.',
   'walk.status.ended': 'Walk ended.',
   'walk.status.reached': "You've reached {place}.",
   'walk.status.storyFinished': 'Story finished.',
@@ -221,7 +223,7 @@ const ar: Dict = {
   'walk.weAreTogether': 'نحن معًا',
   'walk.weAreDone': 'انتهينا',
   'walk.logManual': 'تسجيل الخطوات يدويًا',
-  'walk.logManualHint': 'للاختبار حين يتعذّر قراءة سجلّ الخطوات (مثل أندرويد).',
+  'walk.logManualHint': 'لنسخة الويب، أو أينما يتعذّر على العدّاد التلقائي قراءة السجلّ (مثل أندرويد).',
   'walk.log': 'تسجيل',
   'walk.stepsPlaceholder': 'مثال: 2500',
   'walk.status.askingPermission': 'جارٍ طلب إذن الموقع…',
@@ -230,6 +232,8 @@ const ar: Dict = {
   'walk.status.startedFg': 'بدأ المشي. تتبّع المواقع يعمل أثناء فتح التطبيق.',
   'walk.status.stepsUnavailable':
     'عدّاد الخطوات المباشر غير متاح الآن — إمّا رُفض إذن الحركة، أو لا يوجد مستشعر خطوات في هذا الجهاز/المتصفح. استخدم "تسجيل الخطوات يدويًا" أدناه.',
+  'walk.status.webNoSteps':
+    'لا يستطيع أي متصفح قراءة مستشعر الخطوات في الهاتف — هذا يعمل فقط في تطبيق الجوال. سجّل خطواتك يدويًا أدناه بدلاً من ذلك.',
   'walk.status.ended': 'انتهى المشي.',
   'walk.status.reached': 'وصلت إلى {place}.',
   'walk.status.storyFinished': 'انتهت الحكاية.',

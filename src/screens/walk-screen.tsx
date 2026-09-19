@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { FadeIn } from '@/components/fade-in';
 
 import { Card } from '@/components/card';
@@ -259,10 +259,20 @@ export function WalkScreen() {
               <ThemedText type="small" color="textMuted">
                 {status}
               </ThemedText>
-              {stepsLive === 'unavailable' && (
-                <ThemedText type="small" style={{ color: theme.danger }}>
-                  {t('walk.status.stepsUnavailable')}
+              {/* Set expectations up front on web, rather than only after
+                  someone taps Start walk and finds it just says 0 — no
+                  browser exposes a step-counting API at all, on any device,
+                  so this can never work on the web build specifically. */}
+              {Platform.OS === 'web' ? (
+                <ThemedText type="small" color="textMuted">
+                  {t('walk.status.webNoSteps')}
                 </ThemedText>
+              ) : (
+                stepsLive === 'unavailable' && (
+                  <ThemedText type="small" style={{ color: theme.danger }}>
+                    {t('walk.status.stepsUnavailable')}
+                  </ThemedText>
+                )
               )}
             </Card>
           </FadeIn>
