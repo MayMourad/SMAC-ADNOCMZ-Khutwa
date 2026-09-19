@@ -87,6 +87,11 @@ const en: Dict = {
 
   // walk
   'walk.title': 'Walk',
+  'walk.view.list': 'List',
+  'walk.view.map': 'Map',
+  'walk.map.locating': 'Finding your location…',
+  'walk.map.locateDenied': 'Location unavailable — showing the family places anyway.',
+  'walk.map.you': 'You',
   'walk.stepsThisWalk': 'Steps this walk',
   'walk.start': 'Start walk',
   'walk.end': 'End walk',
@@ -198,6 +203,11 @@ const ar: Dict = {
   'tree.blooming': 'عائلتك مجتمعة هنا — الشجرة تُزهر.',
 
   'walk.title': 'المشي',
+  'walk.view.list': 'قائمة',
+  'walk.view.map': 'خريطة',
+  'walk.map.locating': 'جارٍ تحديد موقعك…',
+  'walk.map.locateDenied': 'الموقع غير متاح — نعرض أماكن العائلة رغم ذلك.',
+  'walk.map.you': 'أنت',
   'walk.stepsThisWalk': 'خطوات هذه الجولة',
   'walk.start': 'ابدأ المشي',
   'walk.end': 'إنهاء المشي',

@@ -66,10 +66,22 @@ export async function readTodaySteps(): Promise<
 /**
  * Live step updates while a walk screen is open (foreground only).
  * `callback` receives the cumulative steps since the subscription started.
+ *
+ * Never throws: `expo-sensors` has no web implementation at all, and on
+ * native it needs Motion & Fitness / Activity Recognition permission
+ * (requested by the caller via `requestStepPermission`) before it will
+ * deliver anything. Either case just means "no live updates" — the caller
+ * still has the manual-entry fallback.
  */
 export function watchSteps(callback: (stepsSinceStart: number) => void): () => void {
-  const sub = Pedometer.watchStepCount(({ steps }) => callback(steps));
-  return () => sub.remove();
+  if (Platform.OS === 'web') return () => {};
+  try {
+    const sub = Pedometer.watchStepCount(({ steps }) => callback(steps));
+    return () => sub.remove();
+  } catch (err) {
+    console.warn('[StepsService] watchStepCount unavailable:', err);
+    return () => {};
+  }
 }
 
 /** Manual fallback so a teammate can enter a step count during testing/demo. */

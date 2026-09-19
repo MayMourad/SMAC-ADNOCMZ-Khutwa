@@ -9,12 +9,14 @@
  * through it.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { FadeIn } from '@/components/fade-in';
 
 import { Card } from '@/components/card';
+import { HeritageMap } from '@/components/heritage-map';
 import { PillButton } from '@/components/pill-button';
+import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { isFirebaseConfigured } from '@/config/env';
@@ -23,6 +25,7 @@ import { CURATED_LOCATIONS, getLocation } from '@/data/locations';
 import { storyLang, useLang } from '@/i18n';
 import { useAuth } from '@/hooks/use-auth';
 import { useFamily } from '@/hooks/use-family';
+import { useMemories } from '@/hooks/use-memories';
 import { useTheme } from '@/hooks/use-theme';
 import { useTreeState } from '@/hooks/use-tree-state';
 import {
@@ -35,7 +38,7 @@ import {
 import { getStory } from '@/services/llm';
 import { recomputeTree } from '@/services/scoreSync';
 import { narrate, stopNarration } from '@/services/speech';
-import { manualSteps, watchSteps } from '@/services/steps';
+import { manualSteps, requestStepPermission, watchSteps } from '@/services/steps';
 
 const REGIONS: MemoryRegion[] = CURATED_LOCATIONS.map((l) => ({
   locationId: l.id,
@@ -46,16 +49,32 @@ const REGIONS: MemoryRegion[] = CURATED_LOCATIONS.map((l) => ({
 
 export function WalkScreen() {
   const theme = useTheme();
-  const { t, lang } = useLang();
+  const { t, lang, isRTL } = useLang();
   const { user } = useAuth();
   const { family } = useFamily(user?.uid ?? null);
   const { tree, bloom } = useTreeState(family?.id ?? null);
+  const memories = useMemories();
 
   const [walking, setWalking] = useState(false);
   const [liveSteps, setLiveSteps] = useState(0);
   const [status, setStatus] = useState(t('walk.ready'));
   const [manual, setManual] = useState('');
+  const [view, setView] = useState<'list' | 'map'>('list');
   const stopWatchRef = useRef<null | (() => void)>(null);
+
+  // Feed the map the same unlocked/locked state the Stories screen shows.
+  const mapLocations = useMemo(
+    () =>
+      CURATED_LOCATIONS.map((l) => ({
+        id: l.id,
+        label: l.label,
+        lat: l.lat,
+        lng: l.lng,
+        radiusM: l.radiusM,
+        unlocked: !!memories.find((m) => m.id === l.id)?.unlockedAt,
+      })),
+    [memories],
+  );
 
   useEffect(() => {
     if (!walking) return;
@@ -87,14 +106,30 @@ export function WalkScreen() {
 
   const startWalk = useCallback(async () => {
     setStatus(t('walk.status.askingPermission'));
-    const perm = await requestPermissions({ background: true });
+    setLiveSteps(0);
+
+    // Location (for geofencing) and motion (for the live step count) are two
+    // separate OS permissions — ask for both, and let either one fail on its
+    // own without blocking the other.
+    const [perm, stepsGranted] = await Promise.all([
+      requestPermissions({ background: true }),
+      requestStepPermission(),
+    ]);
+
     if (!perm.foreground) {
       setStatus(t('walk.status.permissionDenied'));
     } else {
       await startGeofencing(REGIONS);
       setStatus(perm.background ? t('walk.status.startedBg') : t('walk.status.startedFg'));
     }
-    stopWatchRef.current = watchSteps(setLiveSteps);
+
+    if (stepsGranted) {
+      stopWatchRef.current = watchSteps(setLiveSteps);
+    } else {
+      // No live pedometer this session (web, permission denied, or the
+      // device has none) — the manual-entry card below still works.
+      stopWatchRef.current = null;
+    }
     setWalking(true);
   }, [t]);
 
@@ -137,69 +172,138 @@ export function WalkScreen() {
         <ThemedText type="title">{t('walk.title')}</ThemedText>
       </FadeIn>
 
-      <FadeIn delay={80}>
-        <Card style={styles.card}>
-          <ThemedText type="label" color="textMuted" uppercase>
-            {t('walk.stepsThisWalk')}
-          </ThemedText>
-          <ThemedText style={{ fontFamily: Fonts.serifSemiBold, fontSize: 52, lineHeight: 58, color: theme.text }} ltr>
-            {liveSteps}
-          </ThemedText>
-          <PillButton
-            full
-            label={walking ? t('walk.end') : t('walk.start')}
-            variant={walking ? 'outline' : 'primary'}
-            onPress={walking ? endWalk : startWalk}
-          />
-          <ThemedText type="small" color="textMuted">
-            {status}
-          </ThemedText>
-        </Card>
-      </FadeIn>
-
-      <FadeIn delay={160}>
-        <Card style={styles.card}>
-          <ThemedText type="heading">{t('walk.together')}</ThemedText>
-          <ThemedText type="body" color="textSecondary">
-            {t('walk.togetherHint')}
-          </ThemedText>
-          <PillButton
-            full
-            variant={tree?.isBlooming ? 'outline' : 'accent'}
-            label={tree?.isBlooming ? t('walk.weAreDone') : t('walk.weAreTogether')}
-            onPress={toggleTogether}
-          />
-        </Card>
-      </FadeIn>
-
-      <FadeIn delay={240}>
-        <Card variant="flat" style={styles.card}>
-          <ThemedText type="heading">{t('walk.logManual')}</ThemedText>
-          <ThemedText type="small" color="textMuted">
-            {t('walk.logManualHint')}
-          </ThemedText>
-          <View style={styles.manualRow}>
-            <TextInput
-              value={manual}
-              onChangeText={setManual}
-              keyboardType="number-pad"
-              placeholder={t('walk.stepsPlaceholder')}
-              placeholderTextColor={theme.textMuted}
+      <FadeIn delay={40}>
+        <View style={styles.viewToggle}>
+          {(['list', 'map'] as const).map((v) => (
+            <PressableScale
+              key={v}
+              haptic={false}
+              activeScale={0.96}
+              onPress={() => setView(v)}
               style={[
-                styles.input,
-                { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface },
-              ]}
-            />
-            <PillButton label={t('walk.log')} onPress={submitManual} />
-          </View>
-        </Card>
+                styles.viewToggleBtn,
+                {
+                  backgroundColor: view === v ? theme.primary : 'transparent',
+                  borderColor: theme.border,
+                },
+              ]}>
+              <ThemedText
+                type="callout"
+                style={{ color: view === v ? theme.onPrimary : theme.textSecondary }}>
+                {v === 'list' ? t('walk.view.list') : t('walk.view.map')}
+              </ThemedText>
+            </PressableScale>
+          ))}
+        </View>
       </FadeIn>
+
+      {view === 'map' && (
+        <FadeIn delay={80}>
+          <Card variant="flat" padding="none" style={styles.mapCard}>
+            <HeritageMap
+              locations={mapLocations}
+              rtl={isRTL}
+              theme={{
+                primary: theme.primary,
+                accent: theme.accent,
+                surface: theme.surface,
+                text: theme.text,
+                textMuted: theme.textMuted,
+                border: theme.border,
+                background: theme.backgroundAlt,
+              }}
+              strings={{
+                unlocked: t('stories.unlocked'),
+                locked: t('stories.locked'),
+                locating: t('walk.map.locating'),
+                locateDenied: t('walk.map.locateDenied'),
+                you: t('walk.map.you'),
+              }}
+            />
+          </Card>
+        </FadeIn>
+      )}
+
+      {view === 'list' && (
+        <>
+          <FadeIn delay={80}>
+            <Card style={styles.card}>
+              <ThemedText type="label" color="textMuted" uppercase>
+                {t('walk.stepsThisWalk')}
+              </ThemedText>
+              <ThemedText style={{ fontFamily: Fonts.serifSemiBold, fontSize: 52, lineHeight: 58, color: theme.text }} ltr>
+                {liveSteps}
+              </ThemedText>
+              <PillButton
+                full
+                label={walking ? t('walk.end') : t('walk.start')}
+                variant={walking ? 'outline' : 'primary'}
+                onPress={walking ? endWalk : startWalk}
+              />
+              <ThemedText type="small" color="textMuted">
+                {status}
+              </ThemedText>
+            </Card>
+          </FadeIn>
+
+          <FadeIn delay={160}>
+            <Card style={styles.card}>
+              <ThemedText type="heading">{t('walk.together')}</ThemedText>
+              <ThemedText type="body" color="textSecondary">
+                {t('walk.togetherHint')}
+              </ThemedText>
+              <PillButton
+                full
+                variant={tree?.isBlooming ? 'outline' : 'accent'}
+                label={tree?.isBlooming ? t('walk.weAreDone') : t('walk.weAreTogether')}
+                onPress={toggleTogether}
+              />
+            </Card>
+          </FadeIn>
+
+          <FadeIn delay={240}>
+            <Card variant="flat" style={styles.card}>
+              <ThemedText type="heading">{t('walk.logManual')}</ThemedText>
+              <ThemedText type="small" color="textMuted">
+                {t('walk.logManualHint')}
+              </ThemedText>
+              <View style={styles.manualRow}>
+                <TextInput
+                  value={manual}
+                  onChangeText={setManual}
+                  keyboardType="number-pad"
+                  placeholder={t('walk.stepsPlaceholder')}
+                  placeholderTextColor={theme.textMuted}
+                  style={[
+                    styles.input,
+                    { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface },
+                  ]}
+                />
+                <PillButton label={t('walk.log')} onPress={submitManual} />
+              </View>
+            </Card>
+          </FadeIn>
+        </>
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   card: { alignSelf: 'stretch', gap: Spacing.two },
+  viewToggle: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    gap: Spacing.two,
+  },
+  viewToggleBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
+    borderRadius: Radii.pill,
+    borderWidth: 1,
+  },
+  mapCard: { alignSelf: 'stretch', overflow: 'hidden' },
   manualRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: Spacing.one },
   input: {
     flex: 1,
