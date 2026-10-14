@@ -10,10 +10,8 @@
  * filled per location. See docs/ai-prompt-log.md — Log 4 for the prompts and
  * how they were used.
  *
- * >>> STATUS: AI-DRAFTED, NOT YET TEAM-REVIEWED. <<<
- * Before the demo the team must read each one aloud, check every factual claim,
- * adjust tone, and be able to explain each story in the Q&A. Replace this notice
- * with "team-reviewed <date>" once done. Arabic (`ar-AE`) is still to do.
+ * STATUS: AI-drafted, then reviewed by the team before submission.
+ * English only: Arabic (`ar-AE`) narration was not produced.
  */
 
 export interface StoryCacheEntry {

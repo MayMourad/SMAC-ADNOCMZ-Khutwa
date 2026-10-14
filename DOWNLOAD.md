@@ -28,11 +28,16 @@ Actions"**.
 
 ## Android — direct APK
 
-**Download link (public, no account needed):**
+**The September 2026 APK has expired.** EAS keeps build artifacts for a limited
+time, so the original download link no longer works. To produce a fresh APK:
 
-<https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk>
+```bash
+eas build -p android --profile preview
+```
 
-**Build page** (QR code + install button, EAS dashboard):
+then share the download link from the new build page.
+
+**Original build record** (EAS dashboard):
 <https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b>
 
 | | |

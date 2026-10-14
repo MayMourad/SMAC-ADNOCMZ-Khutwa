@@ -32,7 +32,7 @@ does **not** call an LLM at runtime — it plays reviewed, cached text via the
 device's text-to-speech.
 
 - Prompt template: `STORY_PROMPT_TEMPLATE` in `src/services/llm.ts`
-- Generated text: `src/data/stories.ts` (English); Arabic still to be produced
+- Generated text: `src/data/stories.ts` (English only; Arabic narration was not produced)
 - Full prompts + how each story was used: `docs/ai-prompt-log.md`, Log 4
 
 ### 2.2 Development assistance

@@ -2,7 +2,7 @@
 
 **Tagline:** Every step waters the story.
 **Open in a browser (no install):** <https://maymourad.github.io/SMAC-ADNOCMZ-Khutwa/>
-**Download (Android APK, any device, free):** <https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk>
+**Android APK:** the September 2026 download has expired; see [`DOWNLOAD.md`](../DOWNLOAD.md) to rebuild.
 **Source:** <https://github.com/MayMourad/SMAC-ADNOCMZ-Khutwa>
 
 ---
@@ -126,12 +126,9 @@ falls back to a calm resting state when the OS requests it.
   <https://maymourad.github.io/SMAC-ADNOCMZ-Khutwa/> — the full app, same live
   Firebase data as the Android build. Everything works except the live step
   counter and background geofencing, which need a phone's sensors.
-- **Android — direct APK (any device, free, no account):**
-  <https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk>
-  — open on an Android phone, download, tap the file, allow *"install unknown
-  apps"*, Install. First launch needs an internet connection (Firebase); a phone
-  hotspot works. Full notes: [`../DOWNLOAD.md`](../DOWNLOAD.md).
-- **Android — EAS build page (QR code + install button):**
+- **Android APK:** the September 2026 download has expired; rebuild with
+  `eas build -p android --profile preview`. Full notes: [`../DOWNLOAD.md`](../DOWNLOAD.md).
+- **Android — EAS build record (September 2026):**
   <https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b>
 - **iOS / any device — Expo Go:** install Expo Go from the App Store, then from
   the repo run `npx expo start --tunnel` and scan the QR. `--tunnel` works on any

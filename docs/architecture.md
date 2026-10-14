@@ -82,12 +82,12 @@ open. `startGeofencing()` picks the right path automatically.
 - Weekly aggregation (`aggregateWeek.ts`) feeds `computeKhutwaScore`; the tree
   recomputes from real activity (`scoreSync.recomputeTree`), called on Home open
   and after unlocks / "together" check-ins / manual step logs.
-- 8 AI-drafted narrations in `data/stories.ts` + Firestore.
+- 8 AI-drafted, team-reviewed English narrations in `data/stories.ts` + Firestore.
 
 ## What's still stubbed / to do
 
-- **Story review + Arabic** — `data/stories.ts` narrations are AI-drafted, not
-  team-reviewed; `ar-AE` not written.
+- **Arabic narration** — `ar-AE` narrations were not written; stories exist in
+  English only (the interface itself is bilingual).
 - **`generate-stories.ts` `callModel()`** — HTTP LLM call is a stub (wire a
   provider + key only to regenerate later).
 - **`recomputeTree` runs client-side** — fine for the MVP; a Cloud Function

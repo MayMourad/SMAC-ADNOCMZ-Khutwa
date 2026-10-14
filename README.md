@@ -18,7 +18,7 @@ Deployed automatically from `main` by [`.github/workflows/deploy-pages.yml`](.gi
 build artifacts for a limited time). Rebuild with `eas build -p android --profile preview`
 (see [Build an installable app](#build-an-installable-app)) and share the new link.
 
-- **Android — EAS build page (QR code + install button):** https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b
+- **Android — EAS build record (September 2026; its download has expired):** https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b
 - **iOS / any device — Expo Go:** install Expo Go, then run `npx expo start --tunnel` in the repo and scan the QR (`--tunnel` works on any network). Standalone iOS distribution needs a paid Apple Developer account.
 - **Full install notes:** [`DOWNLOAD.md`](DOWNLOAD.md) · **all links:** [`LINKS.md`](LINKS.md)
 - **App overview & functionality brief:** [`docs/app-overview.md`](docs/app-overview.md)

@@ -4,11 +4,12 @@
 
 https://maymourad.github.io/SMAC-ADNOCMZ-Khutwa/
 
-## Download the app (Android APK — any device, free, no account)
+## Android APK
 
-https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk
+The September 2026 APK download has expired. Rebuild with
+`eas build -p android --profile preview` (see DOWNLOAD.md).
 
-## Android build page (QR code + install button)
+## Android build record (September 2026)
 
 https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b
 

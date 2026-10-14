@@ -142,6 +142,8 @@ generated the application as a whole.
   verify every claim (the prompt deliberately bans dates/statistics to limit
   factual risk), adjust tone, and make sure each member can speak to each story
   in the Q&A. Arabic (`ar-AE`) narrations are still to be produced.
+  *Update (October 2026): the team reviewed the narrations before submission;
+  Arabic narrations were not produced.*
 - Note on the script: `scripts/generate-stories.ts` builds these same prompts
   but its `callModel()` HTTP call is still a stub — wire it to a provider +
   API key only if you want to regenerate/expand later.
