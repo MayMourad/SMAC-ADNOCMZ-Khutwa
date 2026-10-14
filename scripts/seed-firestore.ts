@@ -8,7 +8,9 @@
  * Usage:
  *   1. Fill app.json > expo.extra.firebase with your project's web config.
  *   2. Enable Anonymous sign-in in the Firebase console (Authentication).
- *   3. Publish docs/firestore.rules (they let a signed-in user create memories).
+ *   3. docs/firestore.rules block client writes to `memories` (curated content).
+ *      To (re)seed, temporarily publish a rule allowing signed-in writes to
+ *      /memories, run this script, then republish docs/firestore.rules.
  *   4. Put any reviewed narration into src/data/stories.ts.
  *   5. npx tsx scripts/seed-firestore.ts
  *

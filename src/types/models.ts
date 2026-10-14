@@ -65,6 +65,8 @@ export interface Family {
    * security rules. Always write it alongside `members`.
    */
   memberUids: string[];
+  /** The invite code the most recent member joined with (checked by the security rules). */
+  joinCode?: string;
   createdAt: EpochMillis;
 }
 

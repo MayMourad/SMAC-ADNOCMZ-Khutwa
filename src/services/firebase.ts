@@ -42,6 +42,7 @@ import {
 import {
   Timestamp,
   addDoc,
+  arrayUnion,
   collection,
   doc,
   getDoc,
@@ -157,6 +158,8 @@ const stepsCol = (familyId: string) =>
   collection(firebaseDb(), 'families', familyId, 'steps');
 const weekStatsDoc = (familyId: string) =>
   doc(firebaseDb(), 'families', familyId, 'stats', 'week');
+/** inviteCodes/{CODE} → { familyId }. Readable by exact code only, never listed. */
+const inviteDoc = (code: string) => doc(firebaseDb(), 'inviteCodes', code);
 
 // ---------------------------------------------------------------------------
 // Family
@@ -202,10 +205,13 @@ export async function bootstrapFamily(
     shareLocation: true,
     joinedAt: Date.now(),
   };
-  const familyId = await createFamily({
-    inviteCode: makeInviteCode(),
-    members: [founder],
-  });
+  // Pick a code nobody holds yet (the space is ~920k codes, so this is rare).
+  let inviteCode = makeInviteCode();
+  for (let i = 0; i < 5 && (await getDoc(inviteDoc(inviteCode))).exists(); i++) {
+    inviteCode = makeInviteCode();
+  }
+  const familyId = await createFamily({ inviteCode, members: [founder] });
+  await setDoc(inviteDoc(inviteCode), { familyId });
   await initTreeState(familyId);
   await getWeekStats(familyId); // creates the week-stats doc with zeros
   return familyId;
@@ -220,17 +226,19 @@ export async function joinFamilyByCode(
   uid: string,
   displayName: string,
 ): Promise<string> {
-  const q = query(
-    familiesCol(),
-    where('inviteCode', '==', inviteCode.trim().toUpperCase()),
-  );
-  const snap = await getDocs(q);
-  const found = snap.docs[0];
-  if (!found) throw new Error('That invite code does not match any family.');
+  const code = inviteCode.trim().toUpperCase();
+  const invite = await getDoc(inviteDoc(code));
+  if (!invite.exists()) throw new Error('That invite code does not match any family.');
+  const familyId = invite.data().familyId as string;
+  const ref = doc(familiesCol(), familyId);
 
-  const family = found.data() as Family;
-  if (family.members.some((m) => m.uid === uid)) return found.id; // already in
-  if (family.members.length >= 3) throw new Error('This family is already full.');
+  // Members can read their own family; anyone else is refused by the rules.
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists() && (snap.data().memberUids as string[]).includes(uid)) return familyId;
+  } catch {
+    // Not a member yet: expected.
+  }
 
   const member: FamilyMember = {
     uid,
@@ -239,11 +247,35 @@ export async function joinFamilyByCode(
     shareLocation: true,
     joinedAt: Date.now(),
   };
-  await updateDoc(found.ref, {
-    members: [...family.members, member],
-    memberUids: [...family.memberUids, uid],
-  });
-  return found.id;
+  try {
+    // `joinCode` lets the security rules check that the joiner knows the
+    // invite code. The rules also cap a family at 3 members.
+    await updateDoc(ref, {
+      members: arrayUnion(member),
+      memberUids: arrayUnion(uid),
+      joinCode: code,
+    });
+  } catch (err) {
+    if ((err as { code?: string })?.code === 'permission-denied') {
+      throw new Error('This family is already full.');
+    }
+    throw err;
+  }
+  return familyId;
+}
+
+/**
+ * Families created before invite codes had their own lookup document get one
+ * the next time a member opens the app. Best effort: never blocks loading.
+ */
+async function ensureInviteCode(familyId: string, code: string | undefined): Promise<void> {
+  if (!code) return;
+  try {
+    const ref = inviteDoc(code);
+    if (!(await getDoc(ref)).exists()) await setDoc(ref, { familyId });
+  } catch (err) {
+    console.warn('[ensureInviteCode]', (err as Error)?.message ?? err);
+  }
 }
 
 /** Toggle one member's location-sharing flag (read-modify-write the array). */
@@ -275,6 +307,7 @@ export async function findFamilyForUser(uid: string): Promise<Family | null> {
   const first = snap.docs[0];
   if (!first) return null;
   const raw = first.data();
+  void ensureInviteCode(first.id, raw.inviteCode as string | undefined);
   return { id: first.id, ...raw, createdAt: toMillis(raw.createdAt) } as Family;
 }
 

@@ -11,6 +11,7 @@ families/{familyId}/steps/{uid}_{date}   -> DailyStepEntry
 families/{familyId}/stats/week           -> WeekStats        (rolling counters)
 treeState/{familyId}                     -> TreeState        (doc id == familyId)
 memories/{memoryId}                      -> Memory
+inviteCodes/{CODE}                       -> { familyId }   (join lookup)
 ```
 
 ### families/{familyId} — `Family`
@@ -20,7 +21,14 @@ memories/{memoryId}                      -> Memory
 | `inviteCode` | string | Short code (e.g. `GHAF-2026`) shown on the Family screen. |
 | `members` | `FamilyMember[]` | 2–3 entries. Each: `uid`, `displayName`, `role` (`guardian`\|`member`), `shareLocation`, `joinedAt`. |
 | `memberUids` | `string[]` | **Mirror of `members[].uid`.** Firestore can't do "array of objects contains value", so this flat array powers `findFamilyForUser` via `array-contains`. Keep it in sync whenever `members` changes. |
+| `joinCode` | string? | The code the most recent member joined with. The security rules check it against `inviteCode`. |
 | `createdAt` | Timestamp | |
+
+### inviteCodes/{CODE} — `{ familyId }`
+
+Written when a family is created (and backfilled for older families the next
+time a member opens the app). Joining reads this one document by its exact
+code. It can't be listed, so families can't be found by browsing.
 
 ### families/{familyId}/steps/{uid}_{date} — `DailyStepEntry`
 
@@ -91,7 +99,13 @@ slug (e.g. `qasr-al-hosn`), which is also the `locationId` LocationService uses.
 
 ## Access rules
 
-See `docs/firestore.rules`. Summary: a signed-in user can read/write a family
-document and its sub-collections only if their uid is in that family's
-`memberUids`; `memories` are readable by any signed-in user and writable only for
-the `unlockedBy` / `unlockedAt` fields.
+See `docs/firestore.rules`. Summary:
+
+- A family document and its data (steps, stats, tree) can be read and written
+  only by uids in that family's `memberUids`.
+- A new member joins by reading `inviteCodes/{CODE}` and then adding exactly
+  themselves, as a `member`, with `joinCode` equal to the family's
+  `inviteCode`. Families hold at most 3 people.
+- `memories` are readable by any signed-in user. Clients can only record their
+  own unlock (`unlockedBy` / `unlockedAt`); the curated stories can't be
+  created, rewritten or deleted from the app.
