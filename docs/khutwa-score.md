@@ -95,5 +95,6 @@ match to ±1.)
 
 ## Testing note
 
-These are pure functions — add `src/logic/khutwaScore.test.ts` with your test
-runner of choice (e.g. `jest-expo`) and assert the worked example above.
+These are pure functions, covered by Jest in `src/logic/khutwaScore.test.ts`
+(10 tests, including this worked example end to end) and
+`src/logic/aggregateWeek.test.ts` (8 tests). Run them with `npm test`.

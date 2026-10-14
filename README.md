@@ -14,13 +14,9 @@ Theme: AI for a Stronger Family Bonds
 
 Deployed automatically from `main` by [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) — this is the same app, running against the same live Firebase project, as the Android build below. Everything works except the two things that genuinely need a phone: the live step counter and background geofencing (the map, stories, scoring, and sign-in all work fully in-browser).
 
-**Android — direct APK (any device, no account, free):**
-
-> **https://expo.dev/artifacts/eas/P_Z82Z_LLAEUqIJWAqzjOWPk2WpwMH_p9vwUXzoJOnI.apk**
-
-Open the link on an Android phone → download → tap the file → allow *"install unknown
-apps"* → Install. First launch needs an internet connection (Firebase); a phone
-hotspot is fine.
+**Android:** the direct APK from the September 2026 build has expired (EAS keeps
+build artifacts for a limited time). Rebuild with `eas build -p android --profile preview`
+(see [Build an installable app](#build-an-installable-app)) and share the new link.
 
 - **Android — EAS build page (QR code + install button):** https://expo.dev/accounts/may.mourad/projects/Khutwa/builds/edf87ef7-8588-4da0-abcd-42bd4ac77a9b
 - **iOS / any device — Expo Go:** install Expo Go, then run `npx expo start --tunnel` in the repo and scan the QR (`--tunnel` works on any network). Standalone iOS distribution needs a paid Apple Developer account.
@@ -141,7 +137,8 @@ See [`docs/architecture.md`](docs/architecture.md) for how the pieces fit togeth
 
 ## Status
 
-🚧 Active development for SMAC 2026 — Submission: Sept 8, 2026 · Demo Day: Sept 16, 2026
+**Completed — Third Place, Khalifa University Smart Mobile App Contest (SMAC) 2026.**
+Submitted Sept 8, 2026 · Demo Day Sept 16, 2026.
 
 Working: Firebase auth (email + anonymous), family create/join by invite code,
 shared tree + Khutwa Score from real weekly activity, 8 seeded heritage
