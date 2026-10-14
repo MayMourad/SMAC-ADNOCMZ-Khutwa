@@ -1,0 +1,13 @@
+{
+  "name": "khutwa-firestore-rules-tests",
+  "private": true,
+  "description": "Emulator tests for docs/firestore.rules. Kept separate from the app's dependencies.",
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project khutwa-rules-test \"node rules.test.mjs ../docs/firestore.rules\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.0.0"
+  }
+}

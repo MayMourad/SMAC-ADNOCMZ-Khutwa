@@ -49,6 +49,16 @@ summary, AI helped produce, and the team reviewed:
 | Build config | `eas.json`, `app.json` identifiers, `docs/build-and-run.md` | build config |
 | UI/UX redesign | "Oasis" design system (colours, type), shared components, illustrated animated Ghaf tree, all six screens rebuilt, English/Arabic i18n + RTL | `src/constants/theme.ts`, `src/components/**`, `src/screens/**`, `src/i18n/**` |
 
+### 2.2a Post-competition security hardening (October 2026)
+
+After the contest, Claude (via Claude Code) was used to review and tighten the
+Firestore security rules. It found that any signed-in user could list families,
+read their invite codes and join them, and could rewrite the curated stories.
+Claude rewrote `docs/firestore.rules`, changed the join flow in
+`src/services/firebase.ts` to use an `inviteCodes` lookup, and wrote the
+emulator tests in `firestore-tests/` (36 checks). The commits carry a
+`Co-Authored-By: Claude` trailer.
+
 ### 2.3 Submission assets (this document set)
 
 Claude also drafted the image-generation prompt, the image-to-video prompt, and
